@@ -1,0 +1,15 @@
+# 依赖与敏感配置
+node_modules/
+.env
+
+# 共享心愿单数据（用户数据，不提交）
+data/
+
+# Vercel CLI 本地缓存
+.vercel/
+
+# 系统与日志
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*

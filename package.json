@@ -1,0 +1,15 @@
+{
+  "name": "wishlist",
+  "version": "1.0.0",
+  "description": "个人心愿单 Wishlist —— 第一阶段：Nintendo Switch 卡带心愿管理（通用分类架构预留）",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node start.js",
+    "test": "node tests/logic.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "license": "MIT"
+}

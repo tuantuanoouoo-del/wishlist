@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="个人心愿单 Wishlist —— Nintendo Switch 卡带心愿管理">
+  <title>我的心愿 · Wishlist</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // 本应用必须通过服务器访问（ES 模块 + 后端 API）。
+    // 若用户直接双击 index.html（file:// 协议），给出明确提示。
+    if (location.protocol === "file:") {
+      document.addEventListener("DOMContentLoaded", function () {
+        var banner = document.getElementById("serverBanner");
+        if (banner) {
+          banner.hidden = false;
+          banner.className = "banner banner--error";
+          banner.textContent = "⚠️ 请通过服务器访问：在项目目录运行 `node start.js` 后，浏览器打开 http://localhost:8787（不要直接双击 index.html）。";
+        }
+      });
+    }
+  </script>
+</head>
+<body>
+  <div id="serverBanner" class="banner" hidden></div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <div class="brand">
+        <span class="brand__logo">💝</span>
+        <div>
+          <h1 class="brand__title">我的心愿</h1>
+          <p class="brand__sub">个人心愿单 · Wishlist</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 分类导航（由 JS 从 Category 注册表动态渲染） -->
+  <nav class="container category-nav" id="categoryNav" aria-label="心愿分类"></nav>
+
+  <main class="container">
+    <!-- 搜索区 -->
+    <section class="search-box">
+      <form id="searchForm" class="search-form" autocomplete="off">
+        <div class="search-form__inputwrap">
+          <span class="search-form__icon">🔍</span>
+          <input id="searchInput" class="search-form__input" type="text"
+                 placeholder="输入中文游戏名，如：塞尔达传说 王国之泪" maxlength="100">
+        </div>
+        <button id="searchButton" class="btn btn--primary search-form__btn" type="submit">搜索</button>
+      </form>
+      <p class="search-hint">支持中文搜索 · 数据来自 RAWG 游戏数据库</p>
+    </section>
+
+    <!-- 搜索结果 -->
+    <section id="searchResults" class="search-results" hidden>
+      <h2 class="section-title">搜索结果</h2>
+      <div id="searchResultsBody" class="search-results__body"></div>
+    </section>
+
+    <!-- 心愿单 -->
+    <section class="wishlist">
+      <div class="wishlist__head">
+        <h2 class="section-title">我的 NS 卡带心愿</h2>
+        <p id="statsLine" class="stats-line"></p>
+      </div>
+
+      <div class="toolbar">
+        <div id="statusTabs" class="tabs"></div>
+        <div class="toolbar__right">
+          <label class="sort-label" for="sortSelect">排序</label>
+          <select id="sortSelect" class="select">
+            <option value="created_at">添加时间</option>
+            <option value="title">游戏名称</option>
+            <option value="release_date">发售日期</option>
+            <option value="price">参考价格</option>
+          </select>
+          <button id="sortOrderBtn" class="btn btn--ghost btn--sm" data-action="sort-order" type="button">降序 ↓</button>
+        </div>
+      </div>
+
+      <div id="wishlistGrid" class="game-grid"></div>
+      <div id="wishlistEmpty" class="wishlist-empty"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>个人心愿单 · 第一阶段：Nintendo Switch 卡带</p>
+      <p class="footer__dim">心愿数据保存在服务器（共享）· 游戏数据来自 RAWG</p>
+    </div>
+  </footer>
+
+  <!-- 游戏详情弹窗 -->
+  <div id="detailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="modal__dialog modal__dialog--wide">
+      <header class="modal__header">
+        <h2 id="detailTitle" class="modal__title">游戏详情</h2>
+        <button class="modal__close" data-action="modal-close" data-modal="detailModal" type="button" aria-label="关闭">✕</button>
+      </header>
+      <div id="detailContent" class="modal__body"></div>
+    </div>
+  </div>
+
+  <!-- 编辑心愿弹窗 -->
+  <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="modal__dialog">
+      <header class="modal__header">
+        <h2 id="editTitle" class="modal__title">编辑心愿</h2>
+        <button class="modal__close" data-action="modal-close" data-modal="editModal" type="button" aria-label="关闭">✕</button>
+      </header>
+      <div id="editContent" class="modal__body"></div>
+      <footer class="modal__footer">
+        <button class="btn btn--ghost" data-action="modal-close" data-modal="editModal" type="button">取消</button>
+        <button class="btn btn--primary" type="submit" form="editForm">保存</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- 图片灯箱 -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="图片预览">
+    <button class="lightbox__close" data-action="lightbox-close" type="button" aria-label="关闭">✕</button>
+    <img class="lightbox__img" src="" alt="">
+  </div>
+
+  <!-- 提示 -->
+  <div id="toast" class="toast-container" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
