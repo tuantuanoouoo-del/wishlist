@@ -13,6 +13,7 @@ import {
   isEmpty,
 } from "./utils.js";
 import { getCategoryIcon, getCategoryName } from "./categories.js";
+import { PRIORITY_LEVELS, normalizePriority } from "./wishlist.js";
 
 const NO_DATA = "暂无资料";
 const NO_IMAGE = "暂无图片";
@@ -67,7 +68,45 @@ export function statusTabsHTML(activeStatus, stats) {
     .join("");
 }
 
+// ---------- 购买优先度筛选 ----------
+
+export function priorityTabsHTML(activePriority, counts) {
+  const tabs = [
+    { id: "all", label: "全部", count: counts.all ?? 0, cls: "" },
+    ...PRIORITY_LEVELS.map((p) => ({
+      id: p.id,
+      label: p.label,
+      count: counts[p.id] ?? 0,
+      cls: `tab--prio tab--prio-${p.id.toLowerCase()}`,
+    })),
+    { id: "none", label: "未分级", count: counts.none ?? 0, cls: "" },
+  ];
+  return tabs
+    .map(
+      (t) => `
+      <button class="tab ${t.cls} ${activePriority === t.id ? "tab--active" : ""}"
+              data-action="priority" data-priority="${t.id}" type="button"
+              title="${escapeHtml(t.full || t.label)}">
+        ${escapeHtml(t.label)} <span class="tab__count">${t.count}</span>
+      </button>`
+    )
+    .join("");
+}
+
 // ---------- 心愿卡片 ----------
+
+export function prioritySelectHTML(priority, itemId) {
+  const p = normalizePriority(priority);
+  const cls = `priority-select--${(p || "none").toLowerCase()}`;
+  return `<select class="priority-select ${cls}" data-action="priority-select"
+          data-id="${escapeHtml(itemId)}" aria-label="购买优先度" title="购买优先度">
+    <option value="" ${p === "" ? "selected" : ""}>未分级</option>
+    <option value="S" ${p === "S" ? "selected" : ""}>S</option>
+    <option value="A" ${p === "A" ? "selected" : ""}>A</option>
+    <option value="B" ${p === "B" ? "selected" : ""}>B</option>
+    <option value="C" ${p === "C" ? "selected" : ""}>C</option>
+  </select>`;
+}
 
 export function wishlistCardHTML(item) {
   const d = item.data || {};
@@ -97,6 +136,10 @@ export function wishlistCardHTML(item) {
       <p class="game-card__price ${isEmpty(d.price) ? "muted" : ""}">
         参考价格：<strong>${escapeHtml(priceText)}</strong>
       </p>
+      <div class="game-card__priority">
+        <span class="meta-label">优先度</span>
+        ${prioritySelectHTML(item.priority, item.id)}
+      </div>
       <div class="game-card__actions">
         <button class="btn btn--ghost btn--sm" data-action="detail" data-id="${escapeHtml(item.id)}" type="button">查看</button>
         <button class="btn btn--ghost btn--sm" data-action="edit" data-id="${escapeHtml(item.id)}" type="button">编辑</button>
@@ -271,11 +314,22 @@ export function detailModalHTML(game, { inWishlist = false, loading = false, fet
 export function editModalHTML(item) {
   const d = item.data || {};
   const priceValue = d.price != null ? d.price : "";
+  const priority = normalizePriority(item.priority);
   return `
   <form class="edit-form" id="editForm">
     <div class="field">
       <label for="editTitle">名称</label>
       <input id="editTitle" name="title" type="text" value="${escapeHtml(item.title)}" maxlength="200">
+    </div>
+    <div class="field">
+      <label for="editPriority">购买优先度</label>
+      <select id="editPriority" name="priority" class="select">
+        <option value="" ${priority === "" ? "selected" : ""}>未分级</option>
+        <option value="S" ${priority === "S" ? "selected" : ""}>S · 最高优先</option>
+        <option value="A" ${priority === "A" ? "selected" : ""}>A · 高优先</option>
+        <option value="B" ${priority === "B" ? "selected" : ""}>B · 中优先</option>
+        <option value="C" ${priority === "C" ? "selected" : ""}>C · 低优先</option>
+      </select>
     </div>
     <div class="field">
       <label for="editPrice">参考价格（元）</label>

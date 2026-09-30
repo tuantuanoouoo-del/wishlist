@@ -207,6 +207,15 @@ h1, h2, h3, p { margin: 0; }
 .tab--active { background: var(--surface-2); color: var(--text); }
 .tab__count { font-size: 11px; color: var(--text-faint); margin-left: 4px; }
 
+.toolbar--compact { margin-bottom: 0; }
+
+/* 购买优先度标签（字母始终着色，激活态靠背景高亮） */
+.tab--prio { font-weight: 700; }
+.tab--prio-s { color: #ff7b82; }
+.tab--prio-a { color: #ffb020; }
+.tab--prio-b { color: #7fa8ff; }
+.tab--prio-c { color: #9aa4b5; }
+
 .sort-label { font-size: 13px; color: var(--text-dim); }
 .select {
   padding: 8px 12px;
@@ -274,6 +283,30 @@ h1, h2, h3, p { margin: 0; }
   box-shadow: var(--shadow-sm);
 }
 .badge--bought { background: var(--success); color: #06240f; }
+
+/* 购买优先度下拉（卡片上直接选择） */
+.game-card__priority {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.priority-select {
+  padding: 4px 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+.priority-select:focus { border-color: var(--accent); }
+.priority-select--s { color: #ff7b82; border-color: rgba(255, 123, 130, 0.45); }
+.priority-select--a { color: #ffb020; border-color: rgba(255, 176, 32, 0.45); }
+.priority-select--b { color: #7fa8ff; border-color: rgba(127, 168, 255, 0.45); }
+.priority-select--c { color: #9aa4b5; border-color: rgba(154, 164, 181, 0.45); }
 
 /* 卡片内容 */
 .game-card__body, .result-card__body {

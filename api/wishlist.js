@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       return json(res, 200, { items });
     } catch (err) {
       console.error("[wishlist] 读取失败", err);
-      return json(res, 502, { error: "心愿单读取失败，请稍后重试。" });
+      return json(res, 502, { error: `心愿单读取失败（${err?.message || err}）` });
     }
   }
 
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       return json(res, 200, { ok: true, count: items.length });
     } catch (err) {
       console.error("[wishlist] 写入失败", err);
-      return json(res, 502, { error: "心愿单保存失败，请稍后重试。" });
+      return json(res, 502, { error: `心愿单保存失败（${err?.message || err}）` });
     }
   }
 

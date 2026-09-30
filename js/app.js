@@ -14,11 +14,14 @@ import {
   updateItem,
   removeItem,
   countStats,
+  normalizePriority,
+  PRIORITY_LEVELS,
 } from "./wishlist.js";
 import { api, ApiError } from "./api.js";
 import {
   categoryChipsHTML,
   statusTabsHTML,
+  priorityTabsHTML,
   wishlistCardHTML,
   searchResultCardHTML,
   detailModalHTML,
@@ -39,6 +42,7 @@ const state = {
   items: [],
   activeCategory: "all",
   statusFilter: "all",
+  priorityFilter: "all",
   sortBy: "created_at",
   sortOrder: "desc",
   searchResults: [],
@@ -68,6 +72,7 @@ function visibleItems() {
   const filtered = filterItems(state.items, {
     category: state.activeCategory,
     status: state.statusFilter,
+    priority: state.priorityFilter,
   });
   return sortItems(filtered, { by: state.sortBy, order: state.sortOrder });
 }
@@ -92,9 +97,25 @@ function renderToolbar() {
   getEl("statsLine").textContent = `共 ${stats.total} 个心愿 · 已购买 ${stats.completed}`;
 }
 
+function priorityCounts() {
+  const counts = { all: state.items.length, none: 0 };
+  for (const lvl of PRIORITY_LEVELS) counts[lvl.id] = 0;
+  for (const it of state.items) {
+    const p = normalizePriority(it.priority);
+    if (p) counts[p] += 1;
+    else counts.none += 1;
+  }
+  return counts;
+}
+
+function renderPriorityTabs() {
+  getEl("priorityTabs").innerHTML = priorityTabsHTML(state.priorityFilter, priorityCounts());
+}
+
 function renderWishlist() {
   renderCategoryNav();
   renderToolbar();
+  renderPriorityTabs();
 
   const items = visibleItems();
   const grid = getEl("wishlistGrid");
@@ -102,7 +123,10 @@ function renderWishlist() {
 
   if (items.length === 0) {
     grid.innerHTML = "";
-    const isFiltered = state.statusFilter !== "all" || state.activeCategory !== "all";
+    const isFiltered =
+      state.statusFilter !== "all" ||
+      state.activeCategory !== "all" ||
+      state.priorityFilter !== "all";
     empty.innerHTML = isFiltered
       ? emptyStateHTML("🔍", "没有符合条件的心愿", "试试切换筛选或分类。")
       : emptyStateHTML("🎮", "还没有心愿", "在上方搜索游戏，点击「加入心愿单」开始收集。");
@@ -302,6 +326,7 @@ function saveEdit(form) {
   const note = form.note.value.trim();
   const price = parsePrice(form.price.value);
   const completed = form.completed.checked;
+  const priority = normalizePriority(form.priority.value);
 
   if (!title) {
     showToast("名称不能为空", "warn");
@@ -312,6 +337,7 @@ function saveEdit(form) {
     title,
     note,
     completed,
+    priority,
     data: { price },
   });
   persist();
@@ -408,6 +434,11 @@ function bindEvents() {
         renderWishlist();
         break;
 
+      case "priority":
+        state.priorityFilter = target.dataset.priority || "all";
+        renderWishlist();
+        break;
+
       case "sort-order":
         state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
         renderWishlist();
@@ -500,6 +531,17 @@ function bindEvents() {
   // 排序选择
   getEl("sortSelect").addEventListener("change", (e) => {
     state.sortBy = e.target.value;
+    renderWishlist();
+  });
+
+  // 卡片上的优先度下拉（委托监听 change）
+  document.addEventListener("change", (e) => {
+    const sel = e.target.closest('[data-action="priority-select"]');
+    if (!sel) return;
+    const item = state.items.find((i) => i.id === sel.dataset.id);
+    if (!item) return;
+    state.items = updateItem(state.items, item.id, { priority: sel.value });
+    persist();
     renderWishlist();
   });
 

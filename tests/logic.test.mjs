@@ -16,6 +16,7 @@ import {
   updateItem,
   removeItem,
   countStats,
+  normalizePriority,
 } from "../js/wishlist.js";
 import { normalizeItem, migrate } from "../js/storage.js";
 import { getEnabledCategories, getCategoryName } from "../js/categories.js";
@@ -157,6 +158,51 @@ test("countStats：统计总数/已完成/未完成", () => {
   assert.equal(stats.uncompleted, 1);
 });
 
+// ---------- 购买优先度（S/A/B/C） ----------
+
+test("normalizePriority：仅接受 S/A/B/C，大小写不敏感，非法值→未分级", () => {
+  assert.equal(normalizePriority("S"), "S");
+  assert.equal(normalizePriority("a"), "A");
+  assert.equal(normalizePriority(" c "), "C");
+  assert.equal(normalizePriority("D"), "");
+  assert.equal(normalizePriority(""), "");
+  assert.equal(normalizePriority(null), "");
+  assert.equal(normalizePriority(undefined), "");
+});
+
+test("createWishlistItem：默认未分级，可传 priority 并归一化", () => {
+  assert.equal(createWishlistItem({}).priority, "");
+  assert.equal(createWishlistItem({ priority: "s" }).priority, "S");
+  assert.equal(createWishlistItem({ priority: "x" }).priority, "");
+});
+
+test("filterItems：按优先度筛选（含未分级）", () => {
+  const s = createWishlistItem({ title: "S", priority: "S" });
+  const a = createWishlistItem({ title: "A", priority: "A" });
+  const none = createWishlistItem({ title: "无" });
+  const items = [s, a, none];
+
+  assert.equal(filterItems(items, { priority: "all" }).length, 3);
+  assert.equal(filterItems(items, { priority: "S" }).length, 1);
+  assert.equal(filterItems(items, { priority: "none" }).length, 1);
+  assert.equal(filterItems(items, { priority: "none" })[0].title, "无");
+});
+
+test("sortItems：按优先度排序 S→A→B→C→未分级", () => {
+  const mk = (p) => createWishlistItem({ title: p || "无", priority: p });
+  const items = [mk("B"), mk(""), mk("S"), mk("C"), mk("A")];
+  const sorted = sortItems(items, { by: "priority", order: "desc" }).map((i) => i.priority);
+  assert.deepEqual(sorted, ["S", "A", "B", "C", ""]);
+});
+
+test("updateItem：可更新优先度并归一化", () => {
+  const item = createWishlistItem({});
+  let items = updateItem([item], item.id, { priority: "s" });
+  assert.equal(items[0].priority, "S");
+  items = updateItem(items, item.id, { priority: "bad" });
+  assert.equal(items[0].priority, "");
+});
+
 // ---------- store（后端 JSON 文件存储） ----------
 
 function tempDataFile(name = "wishlist.json") {
@@ -215,6 +261,12 @@ test("normalizeItem：补齐缺失字段", () => {
   assert.deepEqual(n.data, {});
   assert.equal(normalizeItem(null), null);
   assert.equal(normalizeItem({ noId: true }), null);
+});
+
+test("normalizeItem：补 priority 字段并归一化", () => {
+  assert.equal(normalizeItem({ id: "1" }).priority, "");
+  assert.equal(normalizeItem({ id: "1", priority: "a" }).priority, "A");
+  assert.equal(normalizeItem({ id: "1", priority: "z" }).priority, "");
 });
 
 test("migrate：过滤无效项并归一化", () => {

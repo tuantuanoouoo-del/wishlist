@@ -8,6 +8,7 @@
 // ============================================================
 
 import { api } from "./api.js";
+import { normalizePriority } from "./wishlist.js";
 
 export const SCHEMA_VERSION = 1;
 export const LEGACY_KEY = "wishlist.items"; // 早期 localStorage 版遗留 key
@@ -25,6 +26,7 @@ export function normalizeItem(item) {
     note: item.note || "",
     created_at: item.created_at || new Date().toISOString(),
     completed: Boolean(item.completed),
+    priority: normalizePriority(item.priority),
     data: item.data && typeof item.data === "object" ? item.data : {},
   };
 }

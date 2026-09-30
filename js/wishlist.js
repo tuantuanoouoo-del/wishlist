@@ -7,8 +7,32 @@
 
 import { uid } from "./utils.js";
 
+// ---------- 购买优先度（S/A/B/C 等级） ----------
+
+export const PRIORITY_LEVELS = [
+  { id: "S", label: "S", full: "S 级 · 最高优先" },
+  { id: "A", label: "A", full: "A 级 · 高优先" },
+  { id: "B", label: "B", full: "B 级 · 中优先" },
+  { id: "C", label: "C", full: "C 级 · 低优先" },
+];
+
+export const PRIORITY_ORDER = PRIORITY_LEVELS.map((p) => p.id); // ["S","A","B","C"]
+
+/** 归一化等级：仅接受 S/A/B/C（大小写不敏感），其余为空串（未分级） */
+export function normalizePriority(v) {
+  const p = String(v ?? "").trim().toUpperCase();
+  return PRIORITY_ORDER.includes(p) ? p : "";
+}
+
+/** 等级排序权重：S=0 … C=3，未分级=4（始终排最后） */
+export function priorityRank(v) {
+  const p = normalizePriority(v);
+  if (p === "") return 4;
+  return PRIORITY_ORDER.indexOf(p);
+}
+
 /** 创建一条心愿 */
-export function createWishlistItem({ category, title, data = {}, note = "", createdAt } = {}) {
+export function createWishlistItem({ category, title, data = {}, note = "", createdAt, priority = "" } = {}) {
   const ts = createdAt || new Date().toISOString();
   return {
     id: uid(),
@@ -17,6 +41,7 @@ export function createWishlistItem({ category, title, data = {}, note = "", crea
     note: note || "",
     created_at: typeof ts === "string" ? ts : ts.toISOString(),
     completed: false,
+    priority: normalizePriority(priority),
     data: { ...data },
   };
 }
@@ -46,12 +71,17 @@ export function getByExternalId(items, category, externalId) {
  * 筛选。
  * category: "all" 或具体分类 id
  * status: "all" | "uncompleted" | "completed"
+ * priority: "all" | "none"（未分级） | "S" | "A" | "B" | "C"
  */
-export function filterItems(items, { category = "all", status = "all" } = {}) {
+export function filterItems(items, { category = "all", status = "all", priority = "all" } = {}) {
   return items.filter((it) => {
     if (category !== "all" && it.category !== category) return false;
     if (status === "uncompleted" && it.completed) return false;
     if (status === "completed" && !it.completed) return false;
+    if (priority !== "all") {
+      const p = normalizePriority(it.priority);
+      if (priority === "none" ? p !== "" : p !== priority) return false;
+    }
     return true;
   });
 }
@@ -69,6 +99,16 @@ function isEmptyPrice(v) {
 export function sortItems(items, { by = "created_at", order = "desc" } = {}) {
   const dir = order === "asc" ? 1 : -1;
   const arr = [...items];
+
+  if (by === "priority") {
+    arr.sort((a, b) => {
+      const ra = priorityRank(a.priority);
+      const rb = priorityRank(b.priority);
+      if (ra !== rb) return (ra - rb) * dir; // desc=高优先在前(S→A→B→C→无)
+      return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+    });
+    return arr;
+  }
 
   const keyFor = (it) => {
     switch (by) {
@@ -122,6 +162,7 @@ export function updateItem(items, id, patch = {}) {
     if ("note" in patch) next.note = patch.note;
     if ("completed" in patch) next.completed = patch.completed;
     if ("category" in patch) next.category = patch.category;
+    if ("priority" in patch) next.priority = normalizePriority(patch.priority);
     if ("data" in patch) next.data = { ...it.data, ...patch.data };
     return next;
   });
