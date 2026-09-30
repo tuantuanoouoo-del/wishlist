@@ -9,8 +9,6 @@ import {
   escapeHtml,
   sanitizeHtml,
   formatDate,
-  formatPrice,
-  isEmpty,
 } from "./utils.js";
 import { getCategoryIcon, getCategoryName } from "./categories.js";
 import { PRIORITY_LEVELS, normalizePriority } from "./wishlist.js";
@@ -113,7 +111,7 @@ export function wishlistCardHTML(item) {
   const cover = d.cover || "";
   const genres = Array.isArray(d.genres) ? d.genres.join(" / ") : "";
   const release = formatDate(d.release_date);
-  const priceText = formatPrice(d.price) || "未设置";
+  const priceValue = d.price != null ? d.price : "";
   const boughtClass = item.completed ? "game-card--bought" : "";
 
   return `
@@ -133,9 +131,16 @@ export function wishlistCardHTML(item) {
       <h3 class="game-card__title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
       <p class="game-card__meta"><span class="meta-label">发售</span>${escapeHtml(release || NO_DATA)}</p>
       <p class="game-card__meta"><span class="meta-label">类型</span>${escapeHtml(genres || NO_DATA)}</p>
-      <p class="game-card__price ${isEmpty(d.price) ? "muted" : ""}">
-        参考价格：<strong>${escapeHtml(priceText)}</strong>
-      </p>
+      <div class="game-card__price">
+        <span class="meta-label">参考价格</span>
+        <div class="price-input-wrap">
+          <span class="price-input__symbol">¥</span>
+          <input class="price-input" type="text" inputmode="decimal"
+                 data-action="price-input" data-id="${escapeHtml(item.id)}"
+                 value="${escapeHtml(String(priceValue))}" placeholder="未设置"
+                 aria-label="参考价格">
+        </div>
+      </div>
       <div class="game-card__priority">
         <span class="meta-label">优先度</span>
         ${prioritySelectHTML(item.priority, item.id)}

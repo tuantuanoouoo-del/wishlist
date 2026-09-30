@@ -319,6 +319,14 @@ function parsePrice(str) {
   return Number.isFinite(n) ? n : null;
 }
 
+function savePriceFromInput(input) {
+  const item = state.items.find((i) => i.id === input.dataset.id);
+  if (!item) return;
+  const price = parsePrice(input.value);
+  state.items = updateItem(state.items, item.id, { data: { price } });
+  persist();
+}
+
 function saveEdit(form) {
   const itemId = state.editItemId;
   if (!itemId) return;
@@ -543,6 +551,31 @@ function bindEvents() {
     state.items = updateItem(state.items, item.id, { priority: sel.value });
     persist();
     renderWishlist();
+  });
+
+  // 卡片参考价格：回车确定 / Esc 放弃
+  document.addEventListener("keydown", (e) => {
+    const input = e.target.closest('[data-action="price-input"]');
+    if (!input) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      savePriceFromInput(input);
+      renderWishlist();
+      showToast("价格已保存", "success");
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      const item = state.items.find((i) => i.id === input.dataset.id);
+      const saved = item?.data?.price != null ? item.data.price : "";
+      input.value = String(saved); // 还原为已保存值
+      input.blur();
+    }
+  });
+
+  // 卡片参考价格：失焦自动保存（不重渲染，避免打断焦点）
+  document.addEventListener("focusout", (e) => {
+    const input = e.target.closest('[data-action="price-input"]');
+    if (!input) return;
+    savePriceFromInput(input);
   });
 
   // 编辑表单提交（editForm 由 JS 动态注入，需用事件委托）
