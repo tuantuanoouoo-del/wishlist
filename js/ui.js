@@ -106,6 +106,14 @@ export function prioritySelectHTML(priority, itemId) {
   </select>`;
 }
 
+export function priorityBadgeHTML(priority, itemId) {
+  const p = normalizePriority(priority);
+  const label = p || "未分级";
+  const cls = `priority-badge--${(p || "none").toLowerCase()}`;
+  return `<button type="button" class="priority-badge ${cls}" data-action="priority-edit"
+          data-id="${escapeHtml(itemId)}" title="点击设置优先度" aria-label="设置优先度">${label}</button>`;
+}
+
 export function wishlistCardHTML(item) {
   const d = item.data || {};
   const cover = d.cover || "";
@@ -143,7 +151,9 @@ export function wishlistCardHTML(item) {
       </div>
       <div class="game-card__priority">
         <span class="meta-label">优先度</span>
-        ${prioritySelectHTML(item.priority, item.id)}
+        <div class="priority-field" data-id="${escapeHtml(item.id)}">
+          ${priorityBadgeHTML(item.priority, item.id)}
+        </div>
       </div>
       <div class="game-card__actions">
         <button class="btn btn--ghost btn--sm" data-action="detail" data-id="${escapeHtml(item.id)}" type="button">查看</button>

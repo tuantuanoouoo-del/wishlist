@@ -284,7 +284,7 @@ h1, h2, h3, p { margin: 0; }
 }
 .badge--bought { background: var(--success); color: #06240f; }
 
-/* 购买优先度下拉（卡片上直接选择） */
+/* 购买优先度（点击徽章展开下拉，选完收回只显示等级） */
 .game-card__priority {
   display: flex;
   align-items: center;
@@ -307,6 +307,27 @@ h1, h2, h3, p { margin: 0; }
 .priority-select--a { color: #ffb020; border-color: rgba(255, 176, 32, 0.45); }
 .priority-select--b { color: #7fa8ff; border-color: rgba(127, 168, 255, 0.45); }
 .priority-select--c { color: #9aa4b5; border-color: rgba(154, 164, 181, 0.45); }
+
+.priority-field { display: inline-flex; align-items: center; }
+.priority-badge {
+  min-width: 34px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.priority-badge:hover { border-color: var(--accent); }
+.priority-badge--s { color: #ff7b82; border-color: rgba(255, 123, 130, 0.45); }
+.priority-badge--a { color: #ffb020; border-color: rgba(255, 176, 32, 0.45); }
+.priority-badge--b { color: #7fa8ff; border-color: rgba(127, 168, 255, 0.45); }
+.priority-badge--c { color: #9aa4b5; border-color: rgba(154, 164, 181, 0.45); }
+.priority-badge--none { color: var(--text-faint); }
 
 /* 卡片内容 */
 .game-card__body, .result-card__body {

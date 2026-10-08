@@ -22,6 +22,8 @@ import {
   categoryChipsHTML,
   statusTabsHTML,
   priorityTabsHTML,
+  prioritySelectHTML,
+  priorityBadgeHTML,
   wishlistCardHTML,
   searchResultCardHTML,
   detailModalHTML,
@@ -43,7 +45,7 @@ const state = {
   activeCategory: "all",
   statusFilter: "all",
   priorityFilter: "all",
-  sortBy: "created_at",
+  sortBy: "priority",
   sortOrder: "desc",
   searchResults: [],
   searchQuery: "",
@@ -327,6 +329,29 @@ function savePriceFromInput(input) {
   persist();
 }
 
+function openPrioritySelect(badge) {
+  const field = badge.closest(".priority-field");
+  if (!field) return;
+  const item = state.items.find((i) => i.id === field.dataset.id);
+  if (!item) return;
+  field.innerHTML = prioritySelectHTML(item.priority, item.id);
+  const select = field.querySelector("select");
+  if (select) {
+    select.focus();
+    if (typeof select.showPicker === "function") {
+      try { select.showPicker(); } catch (_) {}
+    }
+  }
+}
+
+function closePrioritySelect(select) {
+  const field = select.closest(".priority-field");
+  if (!field) return; // 已替换为徽章或已脱离 DOM
+  const item = state.items.find((i) => i.id === field.dataset.id);
+  if (!item) return;
+  field.innerHTML = priorityBadgeHTML(item.priority, item.id);
+}
+
 function saveEdit(form) {
   const itemId = state.editItemId;
   if (!itemId) return;
@@ -447,6 +472,10 @@ function bindEvents() {
         renderWishlist();
         break;
 
+      case "priority-edit":
+        openPrioritySelect(target);
+        break;
+
       case "sort-order":
         state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
         renderWishlist();
@@ -542,7 +571,7 @@ function bindEvents() {
     renderWishlist();
   });
 
-  // 卡片上的优先度下拉（委托监听 change）
+  // 卡片上的优先度下拉：选择后保存并重渲染（更新等级、排序、标签计数）
   document.addEventListener("change", (e) => {
     const sel = e.target.closest('[data-action="priority-select"]');
     if (!sel) return;
@@ -551,6 +580,13 @@ function bindEvents() {
     state.items = updateItem(state.items, item.id, { priority: sel.value });
     persist();
     renderWishlist();
+  });
+
+  // 优先度下拉失焦未选择 → 收回为徽章（不保存）
+  document.addEventListener("focusout", (e) => {
+    const sel = e.target.closest && e.target.closest('[data-action="priority-select"]');
+    if (!sel) return;
+    closePrioritySelect(sel);
   });
 
   // 卡片参考价格：回车确定 / Esc 放弃
