@@ -284,13 +284,27 @@ h1, h2, h3, p { margin: 0; }
 }
 .badge--bought { background: var(--success); color: #06240f; }
 
-/* 购买优先度（点击徽章展开下拉，选完收回只显示等级） */
-.game-card__priority {
+/* 参考价格（点击文本展开输入框，选完收回只显示文本） */
+.price-field {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
+  flex: 1;
+  min-width: 0;
 }
+.price-value {
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.price-value:hover { text-decoration: underline; }
+.price-value--empty { color: var(--text-faint); font-weight: 500; }
+
+/* 购买优先度（点击封面左上角徽章展开下拉，选完收回只显示等级） */
 .priority-select {
   padding: 4px 8px;
   background: var(--surface-2);
@@ -309,6 +323,13 @@ h1, h2, h3, p { margin: 0; }
 .priority-select--c { color: #9aa4b5; border-color: rgba(154, 164, 181, 0.45); }
 
 .priority-field { display: inline-flex; align-items: center; }
+.priority-field--cover {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+}
+.priority-field--cover .priority-badge { box-shadow: var(--shadow-sm); }
 .priority-badge {
   min-width: 34px;
   padding: 3px 10px;

@@ -9,6 +9,7 @@ import {
   escapeHtml,
   sanitizeHtml,
   formatDate,
+  formatPrice,
 } from "./utils.js";
 import { getCategoryIcon, getCategoryName } from "./categories.js";
 import { PRIORITY_LEVELS, normalizePriority } from "./wishlist.js";
@@ -51,7 +52,6 @@ export function categoryChipsHTML(categories, activeCategory, countsByCategory) 
 
 export function statusTabsHTML(activeStatus, stats) {
   const tabs = [
-    { id: "all", label: "全部", count: stats.total },
     { id: "uncompleted", label: "未购买", count: stats.uncompleted },
     { id: "completed", label: "已购买", count: stats.completed },
   ];
@@ -114,12 +114,30 @@ export function priorityBadgeHTML(priority, itemId) {
           data-id="${escapeHtml(itemId)}" title="点击设置优先度" aria-label="设置优先度">${label}</button>`;
 }
 
+export function priceFieldHTML(item) {
+  const d = item.data || {};
+  const formatted = formatPrice(d.price);
+  const text = formatted || "未设置";
+  const cls = formatted ? "" : "price-value--empty";
+  return `<button type="button" class="price-value ${cls}" data-action="price-edit"
+          data-id="${escapeHtml(item.id)}" title="点击设置价格" aria-label="设置参考价格">${text}</button>`;
+}
+
+export function priceInputHTML(itemId, price) {
+  const v = price != null ? price : "";
+  return `<div class="price-input-wrap">
+    <span class="price-input__symbol">¥</span>
+    <input class="price-input" type="text" inputmode="decimal"
+           data-action="price-input" data-id="${escapeHtml(itemId)}"
+           value="${escapeHtml(String(v))}" placeholder="未设置" aria-label="参考价格">
+  </div>`;
+}
+
 export function wishlistCardHTML(item) {
   const d = item.data || {};
   const cover = d.cover || "";
   const genres = Array.isArray(d.genres) ? d.genres.join(" / ") : "";
   const release = formatDate(d.release_date);
-  const priceValue = d.price != null ? d.price : "";
   const boughtClass = item.completed ? "game-card--bought" : "";
 
   return `
@@ -133,6 +151,9 @@ export function wishlistCardHTML(item) {
           : ""
       }
       <span class="cover__placeholder">${NO_IMAGE}</span>
+      <div class="priority-field priority-field--cover" data-id="${escapeHtml(item.id)}">
+        ${priorityBadgeHTML(item.priority, item.id)}
+      </div>
       ${item.completed ? '<span class="badge badge--bought">✓ 已购买</span>' : ""}
     </div>
     <div class="game-card__body">
@@ -141,18 +162,8 @@ export function wishlistCardHTML(item) {
       <p class="game-card__meta"><span class="meta-label">类型</span>${escapeHtml(genres || NO_DATA)}</p>
       <div class="game-card__price">
         <span class="meta-label">参考价格</span>
-        <div class="price-input-wrap">
-          <span class="price-input__symbol">¥</span>
-          <input class="price-input" type="text" inputmode="decimal"
-                 data-action="price-input" data-id="${escapeHtml(item.id)}"
-                 value="${escapeHtml(String(priceValue))}" placeholder="未设置"
-                 aria-label="参考价格">
-        </div>
-      </div>
-      <div class="game-card__priority">
-        <span class="meta-label">优先度</span>
-        <div class="priority-field" data-id="${escapeHtml(item.id)}">
-          ${priorityBadgeHTML(item.priority, item.id)}
+        <div class="price-field" data-id="${escapeHtml(item.id)}">
+          ${priceFieldHTML(item)}
         </div>
       </div>
       <div class="game-card__actions">

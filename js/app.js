@@ -24,6 +24,8 @@ import {
   priorityTabsHTML,
   prioritySelectHTML,
   priorityBadgeHTML,
+  priceFieldHTML,
+  priceInputHTML,
   wishlistCardHTML,
   searchResultCardHTML,
   detailModalHTML,
@@ -43,7 +45,7 @@ const CATEGORY = "ns_game"; // 第一阶段唯一启用的分类
 const state = {
   items: [],
   activeCategory: "all",
-  statusFilter: "all",
+  statusFilter: "uncompleted",
   priorityFilter: "all",
   sortBy: "priority",
   sortOrder: "desc",
@@ -125,10 +127,7 @@ function renderWishlist() {
 
   if (items.length === 0) {
     grid.innerHTML = "";
-    const isFiltered =
-      state.statusFilter !== "all" ||
-      state.activeCategory !== "all" ||
-      state.priorityFilter !== "all";
+    const isFiltered = state.items.length > 0;
     empty.innerHTML = isFiltered
       ? emptyStateHTML("🔍", "没有符合条件的心愿", "试试切换筛选或分类。")
       : emptyStateHTML("🎮", "还没有心愿", "在上方搜索游戏，点击「加入心愿单」开始收集。");
@@ -352,6 +351,27 @@ function closePrioritySelect(select) {
   field.innerHTML = priorityBadgeHTML(item.priority, item.id);
 }
 
+function openPriceInput(button) {
+  const field = button.closest(".price-field");
+  if (!field) return;
+  const item = state.items.find((i) => i.id === field.dataset.id);
+  if (!item) return;
+  field.innerHTML = priceInputHTML(item.id, item.data?.price);
+  const input = field.querySelector("input");
+  if (input) {
+    input.focus();
+    input.select();
+  }
+}
+
+function closePriceInput(input) {
+  const field = input.closest(".price-field");
+  if (!field) return; // 已替换为文本或已脱离 DOM
+  const item = state.items.find((i) => i.id === field.dataset.id);
+  if (!item) return;
+  field.innerHTML = priceFieldHTML(item);
+}
+
 function saveEdit(form) {
   const itemId = state.editItemId;
   if (!itemId) return;
@@ -383,9 +403,11 @@ function saveEdit(form) {
 function toggleCompleted(itemId) {
   const item = state.items.find((i) => i.id === itemId);
   if (!item) return;
-  state.items = updateItem(state.items, itemId, { completed: !item.completed });
+  const nowCompleted = !item.completed;
+  state.items = updateItem(state.items, itemId, { completed: nowCompleted });
   persist();
   render();
+  showToast(nowCompleted ? "已标记为已购买" : "已标记为未购买", "success");
 }
 
 function deleteItem(itemId) {
@@ -474,6 +496,10 @@ function bindEvents() {
 
       case "priority-edit":
         openPrioritySelect(target);
+        break;
+
+      case "price-edit":
+        openPriceInput(target);
         break;
 
       case "sort-order":
@@ -602,16 +628,17 @@ function bindEvents() {
       e.preventDefault();
       const item = state.items.find((i) => i.id === input.dataset.id);
       const saved = item?.data?.price != null ? item.data.price : "";
-      input.value = String(saved); // 还原为已保存值
-      input.blur();
+      input.value = String(saved); // 还原，避免失焦误存
+      closePriceInput(input);
     }
   });
 
-  // 卡片参考价格：失焦自动保存（不重渲染，避免打断焦点）
+  // 卡片参考价格：失焦自动保存并收回为文本
   document.addEventListener("focusout", (e) => {
-    const input = e.target.closest('[data-action="price-input"]');
-    if (!input) return;
+    const input = e.target.closest && e.target.closest('[data-action="price-input"]');
+    if (!input || !input.isConnected) return; // 已由 Enter/Esc 处理
     savePriceFromInput(input);
+    closePriceInput(input);
   });
 
   // 编辑表单提交（editForm 由 JS 动态注入，需用事件委托）
