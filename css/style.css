@@ -165,6 +165,10 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- 搜索结果 ---------- */
 .search-results { margin: 22px 0 10px; }
+
+/* ---------- 近三个月新上架 ---------- */
+.releases { margin: 22px 0 10px; }
+
 .search-results__body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

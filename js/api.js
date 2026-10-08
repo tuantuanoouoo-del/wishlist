@@ -43,6 +43,9 @@ export const api = {
   /** 搜索游戏（q 为中文或英文名称） */
   searchGames: (q) => request(`/api/search?q=${encodeURIComponent(q)}`),
 
+  /** 近三个月 Switch 新上架游戏/DLC */
+  releases: () => request("/api/releases"),
+
   /** 获取游戏完整详情（含截图/简介） */
   getGame: (id) => request(`/api/game/${encodeURIComponent(id)}`),
 

@@ -89,6 +89,20 @@ export class RawgClient {
     return data?.results || [];
   }
 
+  /** 近 N 天新上架游戏（按平台过滤、按发售日倒序） */
+  async getRecentGames({ platformIds = [7], days = 90, pageSize = 24 } = {}) {
+    const end = new Date();
+    const start = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    const data = await this.request("/games", {
+      platforms: platformIds.join(","),
+      dates: `${fmt(start)},${fmt(end)}`,
+      ordering: "-released",
+      page_size: pageSize,
+    });
+    return data?.results || [];
+  }
+
   /** 获取单个游戏详情 */
   async getGame(id) {
     return this.request(`/games/${encodeURIComponent(id)}`);

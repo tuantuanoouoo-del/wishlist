@@ -24,11 +24,11 @@ export function normalizePriority(v) {
   return PRIORITY_ORDER.includes(p) ? p : "";
 }
 
-/** 等级排序权重：S=0 … C=3，未分级=4（始终排最后） */
+/** 等级排序权重：S=4 最高 → A=3 → B=2 → C=1，未分级=0（降序时 S 最前、未分级最后） */
 export function priorityRank(v) {
   const p = normalizePriority(v);
-  if (p === "") return 4;
-  return PRIORITY_ORDER.indexOf(p);
+  if (p === "") return 0;
+  return 4 - PRIORITY_ORDER.indexOf(p); // S=4, A=3, B=2, C=1
 }
 
 /** 创建一条心愿 */

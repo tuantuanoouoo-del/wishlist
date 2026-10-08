@@ -27,6 +27,10 @@ export async function apiRouter(req, res, url, ctx) {
     return handleSearch(searchParams, ctx, res);
   }
 
+  if (req.method === "GET" && path === "/releases") {
+    return handleReleases(ctx, res);
+  }
+
   const detailMatch = path.match(/^\/game\/([^/]+)$/);
   if (req.method === "GET" && detailMatch) {
     return handleDetail(decodeURIComponent(detailMatch[1]), ctx, res);
@@ -87,6 +91,38 @@ async function handleSearch(params, ctx, res) {
     count: results.length,
     results,
   });
+}
+
+async function handleReleases(ctx, res) {
+  if (!ctx.config.rawgApiKey) {
+    return json(res, 503, { error: "尚未配置 RAWG API Key，请参考 README 配置后重启服务。" });
+  }
+
+  try {
+    // 近 90 天、Nintendo Switch（平台 id=7）、按发售日倒序
+    const list = await ctx.rawg.getRecentGames({ platformIds: [7], days: 90, pageSize: 24 });
+
+    const results = [];
+    const seen = new Set();
+    for (const raw of list) {
+      if (!hasSwitchPlatform(raw)) continue; // 只保留 NS 平台（兜底）
+      const game = normalizeGame(raw);
+      if (!game.id || seen.has(game.id)) continue;
+      seen.add(game.id);
+      results.push(game);
+    }
+
+    return json(res, 200, { count: results.length, results });
+  } catch (err) {
+    if (err.name === "NoApiKeyError") {
+      return json(res, 503, { error: err.message });
+    }
+    if (err.name === "RawgError") {
+      return json(res, err.status || 502, { error: "新游信息获取失败，请稍后重试。" });
+    }
+    console.error("[releases] 未预期错误", err);
+    return json(res, 502, { error: "新游信息获取失败，请稍后重试。" });
+  }
 }
 
 async function handleDetail(id, ctx, res) {

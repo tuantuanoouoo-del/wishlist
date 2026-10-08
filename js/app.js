@@ -53,6 +53,9 @@ const state = {
   searchQuery: "",
   searchLoading: false,
   searchError: "",
+  releases: [],
+  releasesLoading: false,
+  releasesError: "",
   detailContext: { game: null, itemId: null, inWishlist: false },
   editItemId: null,
 };
@@ -70,6 +73,13 @@ function persist() {
 function isInWishlist(game) {
   const externalId = game?.external_id || game?.id;
   return !!getByExternalId(state.items, CATEGORY, externalId);
+}
+
+function findDiscoveryGame(gameId) {
+  return (
+    state.searchResults.find((g) => (g.id || g.external_id) === gameId) ||
+    state.releases.find((g) => (g.id || g.external_id) === gameId)
+  );
 }
 
 function visibleItems() {
@@ -167,9 +177,53 @@ function renderSearchResults() {
     .join("");
 }
 
+function renderReleases() {
+  const section = getEl("releasesSection");
+  const body = getEl("releasesBody");
+  const line = getEl("releasesLine");
+
+  if (state.releasesLoading) {
+    section.hidden = false;
+    line.textContent = "";
+    body.innerHTML = '<div class="search-loading"><div class="spinner"></div><p>正在加载新上架…</p></div>';
+    return;
+  }
+  if (state.releasesError) {
+    section.hidden = false;
+    line.textContent = "";
+    body.innerHTML = messageHTML(state.releasesError, "error");
+    return;
+  }
+  if (state.releases.length === 0) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  line.textContent = `近 90 天共 ${state.releases.length} 款新游`;
+  body.innerHTML = state.releases
+    .map((g) => searchResultCardHTML(g, isInWishlist(g)))
+    .join("");
+}
+
+async function loadReleases() {
+  state.releasesLoading = true;
+  state.releasesError = "";
+  renderReleases();
+  try {
+    const data = await api.releases();
+    state.releases = data.results || [];
+  } catch (err) {
+    state.releasesError = err.message || "新游信息获取失败";
+  } finally {
+    state.releasesLoading = false;
+    renderReleases();
+  }
+}
+
 function render() {
   renderWishlist();
   renderSearchResults();
+  renderReleases();
   syncSortUI();
 }
 
@@ -269,8 +323,8 @@ function addGameToWishlist(game) {
   return item;
 }
 
-async function addFromSearch(gameId) {
-  const game = state.searchResults.find((g) => (g.id || g.external_id) === gameId);
+async function addFromDiscovery(gameId) {
+  const game = findDiscoveryGame(gameId);
   if (!game) return;
   // 尝试获取完整详情（含截图/简介）再入库；失败则用列表数据
   let full = game;
@@ -511,7 +565,7 @@ function bindEvents() {
       case "detail": {
         const gameId = target.dataset.gameId;
         if (gameId) {
-          const game = state.searchResults.find((g) => (g.id || g.external_id) === gameId);
+          const game = findDiscoveryGame(gameId);
           openDetail(game || gameId);
         } else if (target.dataset.id) {
           // 心愿卡片上的「查看」
@@ -521,7 +575,7 @@ function bindEvents() {
       }
 
       case "add":
-        addFromSearch(target.dataset.gameId);
+        addFromDiscovery(target.dataset.gameId);
         break;
 
       // 心愿卡片操作
@@ -687,6 +741,7 @@ async function init() {
   bindEvents();
   render();
   checkHealth();
+  loadReleases(); // 打开页面自动加载近三个月新上架
 }
 
 init();
