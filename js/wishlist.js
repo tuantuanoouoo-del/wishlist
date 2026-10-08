@@ -92,13 +92,20 @@ function isEmptyPrice(v) {
 
 /**
  * 排序。
- * by: "created_at" | "title" | "release_date" | "price"
+ * by: "created_at" | "title" | "release_date" | "price" | "priority"
  * order: "asc" | "desc"
+ * 已购买（completed）永远排到最后；「未购买 / 已购买」两组各自再按主排序键排序。
  * 价格/日期为空时始终排到末尾，绝不产生 NaN/undefined。
  */
 export function sortItems(items, { by = "created_at", order = "desc" } = {}) {
+  const active = items.filter((it) => !it.completed);
+  const bought = items.filter((it) => it.completed);
+  return [...applySort(active, { by, order }), ...applySort(bought, { by, order })];
+}
+
+function applySort(list, { by, order }) {
   const dir = order === "asc" ? 1 : -1;
-  const arr = [...items];
+  const arr = [...list];
 
   if (by === "priority") {
     arr.sort((a, b) => {

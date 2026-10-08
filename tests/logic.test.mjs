@@ -195,6 +195,22 @@ test("sortItems：按优先度排序 S→A→B→C→未分级", () => {
   assert.deepEqual(sorted, ["S", "A", "B", "C", ""]);
 });
 
+test("sortItems：已购买（completed）永远排到最后", () => {
+  const a = createWishlistItem({ title: "A" });
+  const b = createWishlistItem({ title: "B" });
+  const bought = createWishlistItem({ title: "C" });
+  let items = updateItem([a, b, bought], bought.id, { completed: true });
+
+  const byTime = sortItems(items, { by: "created_at", order: "desc" });
+  assert.equal(byTime[byTime.length - 1].title, "C");
+  assert.equal(byTime[byTime.length - 1].completed, true);
+
+  // 未购买项价格更大时（按价格升序本应排最后），已购买仍排最后
+  items = updateItem(items, a.id, { data: { price: 999 } });
+  const byPrice = sortItems(items, { by: "price", order: "asc" });
+  assert.equal(byPrice[byPrice.length - 1].title, "C");
+});
+
 test("updateItem：可更新优先度并归一化", () => {
   const item = createWishlistItem({});
   let items = updateItem([item], item.id, { priority: "s" });
