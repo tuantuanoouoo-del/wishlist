@@ -718,7 +718,15 @@ function bindEvents() {
         setButtonLoading(btn, true, "同步中…");
         api
           .syncFeishu()
-          .then((r) => showToast(`已同步 ${r.count} 家餐厅到飞书`, "success"))
+          .then(async (r) => {
+            let msg = `已同步 ${r.pushed} 家到飞书`;
+            if (r.imported > 0) {
+              msg += `，从飞书新增 ${r.imported} 家`;
+              state.items = await loadItems();
+              render();
+            }
+            showToast(msg, "success");
+          })
           .catch((err) => showToast(err.message || "同步失败", "error"))
           .finally(() => setButtonLoading(btn, false, "📤 同步到飞书"));
         break;

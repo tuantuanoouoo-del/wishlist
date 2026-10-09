@@ -8,7 +8,13 @@ import { handleSyncFeishu } from "../../lib/feishu.js";
 
 export async function feishuRouter(req, res, url, ctx) {
   if (url.pathname === "/api/sync-feishu") {
-    return handleSyncFeishu(req, res, () => Promise.resolve(ctx.store.get()), ctx.config);
+    return handleSyncFeishu(
+      req,
+      res,
+      () => Promise.resolve(ctx.store.get()),
+      (items) => ctx.store.set(items),
+      ctx.config
+    );
   }
   return json(res, 404, { error: "接口不存在" });
 }
