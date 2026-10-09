@@ -32,6 +32,9 @@
 /* 保证 hidden 属性始终生效（避免 .btn / .toolbar 等 display 规则覆盖） */
 [hidden] { display: none !important; }
 
+/* 餐厅卡片整卡可点击打开详情 */
+.game-card[data-action] { cursor: pointer; }
+
 html, body { margin: 0; padding: 0; }
 
 body {

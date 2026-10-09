@@ -21,6 +21,7 @@ import { api, ApiError } from "./api.js";
 import {
   extractDishes,
   restaurantCardHTML,
+  restaurantDetailHTML,
   restaurantEditFormHTML,
   openAddRestaurant,
   renderPendingImages,
@@ -308,6 +309,11 @@ function setDetailContent(html) {
   getEl("detailContent").innerHTML = html;
 }
 
+function setDetailTitle(text) {
+  const el = document.querySelector("#detailModal .modal__title");
+  if (el) el.textContent = text;
+}
+
 async function openDetail(source) {
   // source：标准化游戏对象，或游戏外部 ID 字符串
   let baseGame;
@@ -319,6 +325,7 @@ async function openDetail(source) {
   }
 
   state.detailContext = { game: baseGame, itemId, inWishlist: isInWishlist(baseGame) };
+  setDetailTitle("游戏详情");
   openModal("detailModal");
   setDetailContent(detailModalHTML(baseGame, { loading: true }));
 
@@ -343,8 +350,19 @@ async function openDetail(source) {
 async function openDetailForItem(itemId) {
   const item = state.items.find((i) => i.id === itemId);
   if (!item) return;
+
+  // 餐厅：本地数据即可渲染详情，无需请求外部接口
+  if (item.category === "restaurant") {
+    state.detailContext = { game: null, itemId, inWishlist: true };
+    setDetailTitle("餐厅详情");
+    openModal("detailModal");
+    setDetailContent(restaurantDetailHTML(item));
+    return;
+  }
+
   const baseGame = item.data || { id: itemId, external_id: itemId, title: item.title };
   state.detailContext = { game: baseGame, itemId, inWishlist: true };
+  setDetailTitle("游戏详情");
   openModal("detailModal");
   setDetailContent(detailModalHTML(baseGame, { inWishlist: true }));
 
@@ -543,6 +561,7 @@ function toggleCompleted(itemId) {
   state.items = updateItem(state.items, itemId, { completed: nowCompleted });
   persist();
   render();
+  closeModal("detailModal"); // 若从餐厅详情里操作，关闭详情避免展示旧状态
   const isRestaurant = item.category === "restaurant";
   showToast(
     nowCompleted
@@ -559,6 +578,7 @@ function deleteItem(itemId) {
   state.items = removeItem(state.items, itemId);
   persist();
   render();
+  closeModal("detailModal"); // 若从餐厅详情里删除，关闭详情
   showToast("已删除", "info");
 }
 
@@ -616,6 +636,8 @@ async function checkHealth() {
 function bindEvents() {
   // 全局点击委托：所有 data-action 按钮
   document.addEventListener("click", (e) => {
+    // 链接只负责跳转，不触发热区（避免点「小红书链接」时同时打开详情）
+    if (e.target.closest("a[href]")) return;
     const target = e.target.closest("[data-action]");
     if (!target) return;
     const action = target.dataset.action;

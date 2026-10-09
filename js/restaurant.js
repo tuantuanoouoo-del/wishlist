@@ -98,7 +98,7 @@ export function restaurantCardHTML(item) {
   ].filter(([, v]) => v);
 
   return `
-  <article class="game-card ${doneClass}" data-id="${escapeHtml(item.id)}">
+  <article class="game-card ${doneClass}" data-id="${escapeHtml(item.id)}" data-action="detail">
     <div class="cover">
       ${
         cover
@@ -122,6 +122,7 @@ export function restaurantCardHTML(item) {
           : ""
       }
       <div class="game-card__actions">
+        <button class="btn btn--ghost btn--sm" data-action="detail" data-id="${escapeHtml(item.id)}" type="button">查看</button>
         <button class="btn btn--ghost btn--sm" data-action="edit" data-id="${escapeHtml(item.id)}" type="button">编辑</button>
         <button class="btn btn--ghost btn--sm" data-action="toggle" data-id="${escapeHtml(item.id)}" type="button">
           ${item.completed ? "标为未去" : "标为已去过"}
@@ -207,6 +208,76 @@ export function restaurantEditFormHTML(item) {
       <span>已去过</span>
     </label>
   </form>`;
+}
+
+// ---------- 餐厅详情 ----------
+
+export function restaurantDetailHTML(item) {
+  const d = item.data || {};
+  const images = Array.isArray(d.images) ? d.images : [];
+  const cover = images[0] || "";
+  const xhsOk = /^https?:\/\//i.test(d.xhs_url || "");
+  const metaRows = [
+    ["区域", d.area],
+    ["菜系", d.cuisine],
+    ["人均", d.price_per_person != null && d.price_per_person !== "" ? `¥${d.price_per_person}` : ""],
+    ["推荐菜", d.dishes],
+  ].filter(([, v]) => v);
+
+  return `
+  <div class="detail" data-id="${escapeHtml(item.id)}">
+    <div class="detail__hero">
+      <div class="detail__cover cover">
+        ${cover ? `<img src="${escapeHtml(cover)}" alt="" onerror="this.parentElement.classList.add('cover--empty')">` : ""}
+        <span class="cover__placeholder">🍜 暂无图片</span>
+      </div>
+      <div class="detail__titleblock">
+        <h2>${escapeHtml(item.title || "未命名餐厅")}</h2>
+        ${item.completed ? '<p class="detail__sub">✓ 已去过</p>' : ""}
+        <div class="detail__footer-actions">
+          <button class="btn btn--ghost" data-action="edit-wish" type="button">编辑</button>
+          <button class="btn btn--ghost" data-action="toggle" data-id="${escapeHtml(item.id)}" type="button">
+            ${item.completed ? "标为未去" : "标为已去过"}
+          </button>
+          <button class="btn btn--danger" data-action="delete" data-id="${escapeHtml(item.id)}" type="button">删除</button>
+          ${xhsOk ? `<a class="btn btn--accent" href="${escapeHtml(d.xhs_url)}" target="_blank" rel="noopener">🔗 打开小红书笔记</a>` : ""}
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-meta">
+      ${metaRows
+        .map(
+          ([label, value]) => `
+        <div class="detail-meta__item">
+          <span class="detail-meta__label">${escapeHtml(label)}</span>
+          <span class="detail-meta__value">${escapeHtml(value)}</span>
+        </div>`
+        )
+        .join("")}
+    </div>
+
+    ${item.note ? `<section class="detail-section"><h3>备注</h3><div class="detail-desc">${escapeHtml(item.note)}</div></section>` : ""}
+
+    <section class="detail-section">
+      <h3>图片（${images.length}）</h3>
+      ${
+        images.length
+          ? `<div class="screenshot-grid">
+              ${images
+                .map(
+                  (u) => `
+                <button class="screenshot" data-action="lightbox" data-url="${escapeHtml(u)}" type="button" aria-label="查看大图">
+                  <img src="${escapeHtml(u)}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cover--empty')">
+                  <span class="cover__placeholder">🍜</span>
+                </button>`
+                )
+                .join("")}
+            </div>`
+          : `<p class="muted">暂无图片</p>`
+      }
+    </section>
+  </div>`;
 }
 
 // ---------- 操作 ----------
