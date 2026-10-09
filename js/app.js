@@ -475,6 +475,74 @@ async function saveRestaurant(form, itemId) {
   showToast("已保存", "success");
 }
 
+/** 把已转存好的图片 URL 追加到表单的图片网格（作为「已有图片」参与保存） */
+function appendExistingImages(urls) {
+  const grid = getEl("imgGrid");
+  if (!grid) return;
+  for (const u of urls) {
+    if (!u) continue;
+    const div = document.createElement("div");
+    div.className = "img-thumb img-thumb--existing";
+    div.dataset.url = u;
+
+    const view = document.createElement("button");
+    view.className = "img-thumb__view";
+    view.type = "button";
+    view.dataset.action = "lightbox";
+    view.dataset.url = u;
+    view.setAttribute("aria-label", "查看大图");
+    const img = document.createElement("img");
+    img.src = u;
+    img.alt = "";
+    img.loading = "lazy";
+    view.appendChild(img);
+
+    const rm = document.createElement("button");
+    rm.className = "img-thumb__remove";
+    rm.type = "button";
+    rm.dataset.action = "img-remove";
+    rm.setAttribute("aria-label", "移除图片");
+    rm.textContent = "✕";
+
+    div.appendChild(view);
+    div.appendChild(rm);
+    grid.appendChild(div);
+  }
+  const n = document.querySelectorAll("#imgGrid .img-thumb--existing").length;
+  const label = getEl("imgCount");
+  if (label) label.textContent = `图片（${n} 张）`;
+}
+
+/** 接收篡改猴脚本回传的笔记内容，回填到餐厅表单 */
+async function handleXhsNote(data) {
+  const form = document.getElementById("editForm");
+  if (!form || state.editCategory !== "restaurant") return;
+
+  const title = data.title || "";
+  const body = data.body || "";
+  const images = Array.isArray(data.images) ? data.images : [];
+
+  // 店名用标题作为起点（用户可改）；正文填到备注
+  if (title && !form.title.value.trim()) form.title.value = title;
+  if (body && !form.note.value.trim()) form.note.value = body;
+
+  if (images.length) {
+    showToast(`正在导入 ${images.length} 张图片…`, "info");
+    try {
+      const r = await api.importXhsImages(images);
+      const urls = Array.isArray(r?.urls) ? r.urls : [];
+      appendExistingImages(urls);
+      if (urls.length === images.length) showToast(`已回填，图片 ${urls.length} 张导入成功`, "success");
+      else if (urls.length > 0) showToast(`已回填标题/正文，图片成功 ${urls.length}/${images.length} 张`, "success");
+      else showToast("已回填标题/正文，但图片导入失败，请手动下载上传", "warn");
+    } catch (err) {
+      showToast(`已回填标题/正文，图片导入失败：${err.message}`, "warn");
+    }
+  } else {
+    showToast("已回填标题与正文（这条笔记没读到图片）", "success");
+  }
+}
+
 function parsePrice(str) {
   if (isEmpty(str)) return null;
   const n = Number(str);
@@ -707,10 +775,23 @@ function bindEvents() {
         deleteItem(target.dataset.id);
         break;
 
-      // 餐厅：添加 / 图片移除
+      // 餐厅：添加 / 图片移除 / 一键导入
       case "add-restaurant":
         openAddRestaurant();
         break;
+
+      case "import-xhs": {
+        const input = document.getElementById("restUrl");
+        const url = ((input && input.value) || "").trim();
+        if (!/^https?:\/\//i.test(url)) {
+          showToast("请先在「小红书链接」里粘贴笔记链接", "warn");
+          if (input) input.focus();
+          break;
+        }
+        window.open(url, "_blank");
+        showToast("已打开笔记，请在笔记页点「回填到心愿单」", "info");
+        break;
+      }
 
       case "img-remove": {
         const thumb = target.closest(".img-thumb");
@@ -815,6 +896,13 @@ function bindEvents() {
       if (skipped > 0) showToast(`已跳过 ${skipped} 张超过 3MB 的图片`, "warn");
       e.target.value = "";
     }
+  });
+
+  // 接收篡改猴脚本从小红书标签页回传的笔记内容
+  window.addEventListener("message", (e) => {
+    const data = e.data;
+    if (!data || data.type !== "XHS_NOTE") return;
+    handleXhsNote(data);
   });
 
   // 优先度下拉失焦未选择 → 收回为徽章（不保存）

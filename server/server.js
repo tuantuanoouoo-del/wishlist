@@ -104,7 +104,7 @@ export function createServer() {
       try {
         if (pathname.startsWith("/api/wishlist")) {
           await wishlistRouter(req, res, url, ctx);
-        } else if (pathname.startsWith("/api/upload-image")) {
+        } else if (pathname.startsWith("/api/upload-image") || pathname.startsWith("/api/import-xhs-images")) {
           await uploadRouter(req, res, url, ctx);
         } else {
           await apiRouter(req, res, url, ctx);

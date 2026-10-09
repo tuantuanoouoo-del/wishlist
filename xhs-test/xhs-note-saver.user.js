@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         小红书笔记提取（自用·餐厅收藏）
 // @namespace    wishlist-restaurant
-// @version      0.1.0
-// @description  仅读取当前打开的笔记页面上「可见」的标题、正文和图片，可下载图片。不登录、不读 Cookie、不连外部服务器、无自动更新。
+// @version      0.2.0
+// @description  仅读取当前打开的笔记页面上「可见」的标题、正文和图片，可下载图片；从心愿单打开时可一键回填。不登录、不读 Cookie、不连外部服务器、无自动更新。
 // @match        *://www.xiaohongshu.com/explore/*
 // @match        *://www.xiaohongshu.com/discovery/item/*
 // @match        *://www.rednote.com/explore/*
 // @match        *://www.rednote.com/discovery/item/*
 // @grant        GM_download
+// @grant        unsafeWindow
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -203,6 +204,27 @@
         setTimeout(() => (copyImgBtn.textContent = '复制图片链接'), 1200);
       });
     });
+
+    // 从心愿单打开时（存在 opener），提供「回填到心愿单」
+    const win = (typeof unsafeWindow !== 'undefined' ? unsafeWindow : window);
+    if (win.opener) {
+      const sendBtn = document.createElement('button');
+      sendBtn.textContent = '回填到心愿单';
+      sendBtn.style.cssText = 'flex:1;min-width:90px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid #16a34a;background:#16a34a;color:#fff;';
+      sendBtn.onclick = () => {
+        try {
+          win.opener.postMessage(
+            { type: 'XHS_NOTE', title: getTitle(), body: bodyArea.value, images },
+            '*'
+          );
+          sendBtn.textContent = '已回填 ✓';
+          setTimeout(() => (sendBtn.textContent = '回填到心愿单'), 1500);
+        } catch (e) {
+          sendBtn.textContent = '回填失败';
+        }
+      };
+      btnRow.appendChild(sendBtn);
+    }
 
     btnRow.appendChild(dlBtn);
     btnRow.appendChild(copyTextBtn);

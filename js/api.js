@@ -84,4 +84,12 @@ export const api = {
       reader.onerror = () => reject(new ApiError("读取图片失败", 0));
       reader.readAsDataURL(file);
     }),
+
+  /** 把小红书图片链接转存到 Supabase，返回新的公开 URL 列表 */
+  importXhsImages: (urls) =>
+    request("/api/import-xhs-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: Array.isArray(urls) ? urls : [] }),
+    }),
 };

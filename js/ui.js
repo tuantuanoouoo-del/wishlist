@@ -465,11 +465,15 @@ export function restaurantEditFormHTML(item) {
       </div>
       <div class="field">
         <label for="restUrl">小红书链接</label>
-        <input id="restUrl" name="xhs_url" type="text" inputmode="url" value="${escapeHtml(d.xhs_url || "")}" maxlength="500" placeholder="https://www.xiaohongshu.com/explore/…">
+        <div class="url-row">
+          <input id="restUrl" name="xhs_url" type="text" inputmode="url" value="${escapeHtml(d.xhs_url || "")}" maxlength="500" placeholder="https://www.xiaohongshu.com/explore/…">
+          <button class="btn btn--ghost btn--sm" data-action="import-xhs" type="button">🔗 一键导入</button>
+        </div>
+        <p class="hint">粘贴链接后点「一键导入」→ 自动打开笔记 → 在笔记页点「回填到心愿单」，标题/正文/图片会自动填进来。</p>
       </div>
     </div>
     <div class="field">
-      <label>图片（${images.length} 张）</label>
+      <label id="imgCount">图片（${images.length} 张）</label>
       <div class="img-grid" id="imgGrid">
         ${images
           .map(

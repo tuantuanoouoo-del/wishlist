@@ -796,6 +796,9 @@ h1, h2, h3, p { margin: 0; }
 .img-thumb__remove:hover { background: var(--danger); }
 .img-add { align-self: flex-start; cursor: pointer; }
 
+.url-row { display: flex; gap: 8px; align-items: center; }
+.url-row input { flex: 1; }
+
 @media (max-width: 480px) {
   .field-row { grid-template-columns: 1fr; }
 }
