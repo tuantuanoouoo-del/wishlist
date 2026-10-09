@@ -18,6 +18,7 @@ import {
   PRIORITY_LEVELS,
 } from "./wishlist.js";
 import { api, ApiError } from "./api.js";
+import { extractDishes } from "./restaurant.js";
 import {
   categoryChipsHTML,
   statusTabsHTML,
@@ -526,6 +527,12 @@ async function handleXhsNote(data) {
   if (title && !form.title.value.trim()) form.title.value = title;
   if (body && !form.note.value.trim()) form.note.value = body;
 
+  // 自动从正文提取菜名，填到「推荐菜」（用户可再核对/修改）
+  if (body && !form.dishes.value.trim()) {
+    const dishes = extractDishes(body);
+    if (dishes.length) form.dishes.value = dishes.join("、");
+  }
+
   if (images.length) {
     showToast(`正在导入 ${images.length} 张图片…`, "info");
     try {
@@ -790,6 +797,19 @@ function bindEvents() {
         }
         window.open(url, "_blank");
         showToast("已打开笔记，请在笔记页点「回填到心愿单」", "info");
+        break;
+      }
+
+      case "extract-dishes": {
+        const form = document.getElementById("editForm");
+        const note = form && form.note ? form.note.value : "";
+        const dishes = extractDishes(note);
+        if (!dishes.length) {
+          showToast("没从正文里识别出菜名，请手动填写", "warn");
+        } else {
+          form.dishes.value = dishes.join("、");
+          showToast(`已提取 ${dishes.length} 个候选菜名，请核对`, "success");
+        }
         break;
       }
 

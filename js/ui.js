@@ -455,7 +455,11 @@ export function restaurantEditFormHTML(item) {
     </div>
     <div class="field">
       <label for="restDishes">推荐菜</label>
-      <input id="restDishes" name="dishes" type="text" value="${escapeHtml(d.dishes || "")}" maxlength="200" placeholder="例如：烤鸭、虾饺、杨枝甘露">
+      <div class="url-row">
+        <input id="restDishes" name="dishes" type="text" value="${escapeHtml(d.dishes || "")}" maxlength="200" placeholder="例如：烤鸭、虾饺、杨枝甘露">
+        <button class="btn btn--ghost btn--sm" data-action="extract-dishes" type="button">✨ 提取</button>
+      </div>
+      <p class="hint">点「提取」从备注正文自动猜菜名（结果供核对，可手动改）。</p>
     </div>
     <div class="field-row">
       <div class="field">
