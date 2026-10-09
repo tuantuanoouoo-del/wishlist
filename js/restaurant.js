@@ -98,7 +98,7 @@ export function restaurantCardHTML(item) {
   ].filter(([, v]) => v);
 
   return `
-  <article class="game-card ${doneClass}" data-id="${escapeHtml(item.id)}" data-action="detail">
+  <article class="game-card game-card--restaurant ${doneClass}" data-id="${escapeHtml(item.id)}" data-action="detail">
     <div class="cover">
       ${
         cover
