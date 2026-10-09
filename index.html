@@ -40,6 +40,12 @@
   <nav class="container category-nav" id="categoryNav" aria-label="心愿分类"></nav>
 
   <main class="container">
+    <!-- 游戏页子页签：发现 / 心愿单（仅 NS 卡带页显示） -->
+    <nav id="gameTabs" class="game-tabs" hidden>
+      <button class="game-tab game-tab--active" data-action="game-view" data-view="discovery" type="button">🔍 发现</button>
+      <button class="game-tab" data-action="game-view" data-view="wishlist" type="button">💝 心愿单</button>
+    </nav>
+
     <div id="discoverySection">
     <!-- 搜索区 -->
     <section class="search-box">
@@ -71,7 +77,7 @@
     </div>
 
     <!-- 心愿单 -->
-    <section class="wishlist">
+    <section class="wishlist" id="wishlistSection">
       <div class="wishlist__head">
         <div>
           <h2 id="wishlistTitle" class="section-title">我的 NS 卡带心愿</h2>

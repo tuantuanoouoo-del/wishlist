@@ -911,3 +911,47 @@ h1, h2, h3, p { margin: 0; }
   /* Toast 上移，避免被底部导航挡住 */
   .toast-container { bottom: calc(74px + env(safe-area-inset-bottom, 0)); }
 }
+
+/* ============================================================
+   游戏页子页签（发现 / 心愿单）
+   ------------------------------------------------------------
+   只在 NS 卡带页显示，用于在「搜索/新游」与「心愿单」之间切换。
+   ============================================================ */
+.game-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 6px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.game-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.game-tab:hover { color: var(--text); }
+.game-tab--active { background: var(--accent); color: #fff; }
+
+@media (max-width: 640px) {
+  .game-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: 0 -12px 12px;
+    padding: 6px 12px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+}

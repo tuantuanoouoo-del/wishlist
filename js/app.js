@@ -55,6 +55,7 @@ const CATEGORY = "ns_game"; // 游戏分类（餐厅走 restaurant.js 模块）
 const state = {
   items: [],
   activeCategory: "ns_game",
+  gameView: "discovery",
   statusFilter: "uncompleted",
   priorityFilter: "all",
   sortBy: "priority",
@@ -130,10 +131,21 @@ function renderToolbar() {
 /** 按当前分类切换顶部区域显示（游戏搜索 vs 餐厅添加按钮），保证两页互不串场 */
 function syncSections() {
   const isRestaurant = state.activeCategory === "restaurant";
-  getEl("discoverySection").hidden = isRestaurant;      // 游戏搜索/新上架仅游戏页显示
+  const showDiscovery = !isRestaurant && state.gameView === "discovery";
+  const showWishlist = isRestaurant || state.gameView === "wishlist";
+
+  getEl("gameTabs").hidden = isRestaurant;              // 子页签仅游戏页显示
+  getEl("discoverySection").hidden = !showDiscovery;    // 发现视图（搜索/新游）
+  getEl("wishlistSection").hidden = !showWishlist;      // 心愿单视图
   getEl("priorityToolbar").hidden = isRestaurant;       // 购买优先度仅游戏页显示
   getEl("addRestaurantBtn").hidden = !isRestaurant;     // 添加餐厅仅餐厅页显示
   getEl("syncFeishuBtn").hidden = !isRestaurant;        // 同步飞书仅餐厅页显示
+
+  // 子页签高亮
+  getEl("gameTabs").querySelectorAll(".game-tab").forEach((t) => {
+    t.classList.toggle("game-tab--active", t.dataset.view === state.gameView);
+  });
+
   const titles = {
     ns_game: "我的 NS 卡带心愿",
     restaurant: "我的餐厅心愿",
@@ -656,6 +668,11 @@ function bindEvents() {
         // 切分类时回到该分类的默认排序（卡带=优先度 S→A→B→C，餐厅=添加时间）
         state.sortBy = defaultSortFor(state.activeCategory);
         renderWishlist();
+        break;
+
+      case "game-view":
+        state.gameView = target.dataset.view === "wishlist" ? "wishlist" : "discovery";
+        syncSections();
         break;
 
       case "status":
