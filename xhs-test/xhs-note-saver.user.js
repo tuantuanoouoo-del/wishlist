@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         小红书笔记提取（自用·餐厅收藏）
 // @namespace    wishlist-restaurant
-// @version      0.2.0
+// @version      0.2.1
 // @description  仅读取当前打开的笔记页面上「可见」的标题、正文和图片，可下载图片；从心愿单打开时可一键回填。不登录、不读 Cookie、不连外部服务器、无自动更新。
 // @match        *://www.xiaohongshu.com/explore/*
 // @match        *://www.xiaohongshu.com/discovery/item/*
@@ -67,16 +67,26 @@
       if (!prev || w > prev.w) best.set(base, { url: cleanImgUrl(u), w });
     };
 
-    // og:image 是笔记自身的图，最可靠
+    // og:image 是笔记自身的图，最可靠，全部收入
     document.querySelectorAll('meta[property="og:image"]').forEach(m => consider(m.content));
 
-    // 只收「大图」：已加载的自然宽度 或 URL 里的 w 参数 >= 400，
-    // 这样能排除作者头像和「相关笔记」的小缩略图
-    document.querySelectorAll('img').forEach(img => {
-      const src = img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('src');
-      if (!src) return;
-      const w = img.naturalWidth || parseImgUrl(src).w || 0;
-      if (w >= 400) consider(src);
+    // 页面里的小红书 CDN 图片：只收「正文大图」。
+    // 正文图通常远大于作者头像和相关笔记缩略图，所以取页面最大宽度后，
+    // 只收宽度「接近最大值」的图（自适应，避免固定阈值误判）。
+    const candidates = [...document.querySelectorAll('img')]
+      .map(img => {
+        const src = img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('src');
+        if (!src || !/xhscdn\.com|rednotecdn\.com|sns-img|sns-webpic/i.test(src)) return null;
+        const w = img.naturalWidth || parseImgUrl(src).w || 0;
+        return { src, w };
+      })
+      .filter(Boolean);
+
+    const maxW = candidates.reduce((m, c) => Math.max(m, c.w), 0);
+    const threshold = Math.max(640, Math.floor(maxW * 0.65));
+
+    candidates.forEach(c => {
+      if (c.w >= threshold) consider(c.src);
     });
 
     return [...best.values()].map(v => v.url);
