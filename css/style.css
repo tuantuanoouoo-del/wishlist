@@ -875,11 +875,9 @@ h1, h2, h3, p { margin: 0; }
   /* 给底部导航留出空间，避免遮挡页脚 */
   body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0)); }
 
-  /* 卡片两列（一行两个游戏，更紧凑） */
+  /* 卡片两列（一行两个，游戏和餐厅统一） */
   .game-grid,
   .search-results__body { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  /* 餐厅卡片内容多，仍整行铺满 */
-  .game-card--restaurant { grid-column: 1 / -1; }
 
   /* 弹窗全屏（像原生页面，头尾固定、中间滚动） */
   .modal { padding: 0; align-items: stretch; }
