@@ -1,14 +1,17 @@
 // ==UserScript==
 // @name         小红书笔记提取（自用·餐厅收藏）
 // @namespace    wishlist-restaurant
-// @version      0.2.1
-// @description  仅读取当前打开的笔记页面上「可见」的标题、正文和图片，可下载图片；从心愿单打开时可一键回填。不登录、不读 Cookie、不连外部服务器、无自动更新。
+// @version      0.3.0
+// @description  仅读取当前打开笔记页面上可见的标题/正文/图片，可下载图片；从心愿单打开时可一键回填标题/正文/封面图。只连小红书自己的图片服务器抓封面，不登录、不读 Cookie、无自动更新。
 // @match        *://www.xiaohongshu.com/explore/*
 // @match        *://www.xiaohongshu.com/discovery/item/*
 // @match        *://www.rednote.com/explore/*
 // @match        *://www.rednote.com/discovery/item/*
 // @grant        GM_download
+// @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
+// @connect      xhscdn.com
+// @connect      rednotecdn.com
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -90,6 +93,42 @@
     });
 
     return [...best.values()].map(v => v.url);
+  }
+
+  // ============ 封面抓取（在浏览器里下，带 Referer，稳定） ============
+
+  function fetchCover(url) {
+    return new Promise((resolve) => {
+      if (!url) return resolve(null);
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url,
+        headers: { Referer: 'https://www.xiaohongshu.com/' },
+        responseType: 'blob',
+        timeout: 15000,
+        onload: (res) => {
+          try {
+            if (res.status < 200 || res.status >= 300) return resolve(null);
+            const blob = res.response;
+            if (!blob || !blob.size) return resolve(null);
+            if (blob.size > 3 * 1024 * 1024) return resolve(null); // 超过 3MB 放弃
+            const type = blob.type || 'image/jpeg';
+            const ext = /png/.test(type) ? 'png' : /webp/.test(type) ? 'webp' : /gif/.test(type) ? 'gif' : 'jpg';
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const data = String(reader.result || '').split(',')[1] || '';
+              resolve(data ? { filename: 'cover.' + ext, contentType: type, data } : null);
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          } catch (e) {
+            resolve(null);
+          }
+        },
+        onerror: () => resolve(null),
+        ontimeout: () => resolve(null),
+      });
+    });
   }
 
   // ============ 下载 ============
@@ -221,13 +260,15 @@
       const sendBtn = document.createElement('button');
       sendBtn.textContent = '回填到心愿单';
       sendBtn.style.cssText = 'flex:1;min-width:90px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid #16a34a;background:#16a34a;color:#fff;';
-      sendBtn.onclick = () => {
+      sendBtn.onclick = async () => {
         try {
+          sendBtn.textContent = '抓封面中…';
+          const cover = await fetchCover(images[0]);
           win.opener.postMessage(
-            { type: 'XHS_NOTE', title: getTitle(), body: bodyArea.value, images },
+            { type: 'XHS_NOTE', title: getTitle(), body: bodyArea.value, cover },
             '*'
           );
-          sendBtn.textContent = '已回填 ✓';
+          sendBtn.textContent = cover ? '已回填 ✓' : '已回填(无图)';
           setTimeout(() => (sendBtn.textContent = '回填到心愿单'), 1500);
         } catch (e) {
           sendBtn.textContent = '回填失败';

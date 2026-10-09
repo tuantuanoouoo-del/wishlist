@@ -521,7 +521,7 @@ async function handleXhsNote(data) {
 
   const title = data.title || "";
   const body = data.body || "";
-  const images = Array.isArray(data.images) ? data.images : [];
+  const cover = data.cover || null;
 
   // 店名用标题作为起点（用户可改）；正文填到备注
   if (title && !form.title.value.trim()) form.title.value = title;
@@ -533,20 +533,17 @@ async function handleXhsNote(data) {
     if (dishes.length) form.dishes.value = dishes.join("、");
   }
 
-  if (images.length) {
-    showToast(`正在导入 ${images.length} 张图片…`, "info");
+  if (cover && cover.data) {
+    showToast("正在保存封面图…", "info");
     try {
-      const r = await api.importXhsImages(images);
-      const urls = Array.isArray(r?.urls) ? r.urls : [];
-      appendExistingImages(urls);
-      if (urls.length === images.length) showToast(`已回填，图片 ${urls.length} 张导入成功`, "success");
-      else if (urls.length > 0) showToast(`已回填标题/正文，图片成功 ${urls.length}/${images.length} 张`, "success");
-      else showToast("已回填标题/正文，但图片导入失败，请手动下载上传", "warn");
+      const url = await api.uploadImageData(cover);
+      appendExistingImages([url]);
+      showToast("封面图已保存", "success");
     } catch (err) {
-      showToast(`已回填标题/正文，图片导入失败：${err.message}`, "warn");
+      showToast(`封面图保存失败：${err.message}`, "warn");
     }
   } else {
-    showToast("已回填标题与正文（这条笔记没读到图片）", "success");
+    showToast("已回填标题与正文（这条笔记没抓到封面图）", "success");
   }
 }
 

@@ -85,6 +85,18 @@ export const api = {
       reader.readAsDataURL(file);
     }),
 
+  /** 上传一张图片（data 为纯 base64 或 dataURL），返回公开 URL */
+  uploadImageData: ({ filename, contentType, data }) =>
+    request("/api/upload-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: filename || "image.jpg",
+        contentType: contentType || "image/jpeg",
+        data: String(data || "").replace(/^data:[^;]+;base64,/, ""),
+      }),
+    }).then((res) => res.url),
+
   /** 把小红书图片链接转存到 Supabase，返回新的公开 URL 列表 */
   importXhsImages: (urls) =>
     request("/api/import-xhs-images", {
