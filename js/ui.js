@@ -20,22 +20,15 @@ const NO_IMAGE = "暂无图片";
 // ---------- 分类导航 ----------
 
 export function categoryChipsHTML(categories, activeCategory, countsByCategory) {
-  const all = [
-    {
-      id: "all",
-      icon: "🗂️",
-      label: "全部心愿",
-      count: countsByCategory.all ?? 0,
-    },
-    ...categories.map((c) => ({
-      id: c.id,
-      icon: c.icon,
-      label: c.name,
-      count: countsByCategory[c.id] ?? 0,
-    })),
-  ];
+  // 分类完全区分，不再提供「全部心愿」合并视图
+  const chips = categories.map((c) => ({
+    id: c.id,
+    icon: c.icon,
+    label: c.name,
+    count: countsByCategory[c.id] ?? 0,
+  }));
 
-  return all
+  return chips
     .map((c) => {
       const active = c.id === activeCategory ? "chip--active" : "";
       return `

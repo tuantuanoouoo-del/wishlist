@@ -53,7 +53,7 @@ const CATEGORY = "ns_game"; // 游戏分类（餐厅走 restaurant.js 模块）
 
 const state = {
   items: [],
-  activeCategory: "all",
+  activeCategory: "ns_game",
   statusFilter: "uncompleted",
   priorityFilter: "all",
   sortBy: "created_at",
@@ -108,7 +108,7 @@ function visibleItems() {
 // ---------- 渲染 ----------
 
 function renderCategoryNav() {
-  const counts = { all: state.items.length };
+  const counts = {};
   for (const c of getEnabledCategories()) {
     counts[c.id] = state.items.filter((it) => it.category === c.id).length;
   }
@@ -135,7 +135,6 @@ function syncSections() {
   const titles = {
     ns_game: "我的 NS 卡带心愿",
     restaurant: "我的餐厅心愿",
-    all: "我的全部心愿",
   };
   getEl("wishlistTitle").textContent = titles[state.activeCategory] || "我的心愿";
 }
