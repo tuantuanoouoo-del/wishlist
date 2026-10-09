@@ -57,7 +57,7 @@ const state = {
   activeCategory: "ns_game",
   statusFilter: "uncompleted",
   priorityFilter: "all",
-  sortBy: "created_at",
+  sortBy: "priority",
   sortOrder: "desc",
   searchResults: [],
   searchQuery: "",
@@ -289,6 +289,11 @@ function sortOptionsFor(category) {
     { value: "created_at", label: "添加时间" },
     { value: "title", label: "名称" },
   ];
+}
+
+/** 各分类默认排序键：卡带按优先度（S→A→B→C 在前），餐厅按添加时间 */
+function defaultSortFor(category) {
+  return category === "restaurant" ? "created_at" : "priority";
 }
 
 function syncSortUI() {
@@ -648,10 +653,8 @@ function bindEvents() {
         state.activeCategory = target.dataset.category;
         // 餐厅页无「购买优先度」概念：切到餐厅时清掉残留的优先度筛选，避免串场
         if (state.activeCategory === "restaurant") state.priorityFilter = "all";
-        {
-          const opts = sortOptionsFor(state.activeCategory);
-          if (!opts.some((o) => o.value === state.sortBy)) state.sortBy = opts[0].value;
-        }
+        // 切分类时回到该分类的默认排序（卡带=优先度 S→A→B→C，餐厅=添加时间）
+        state.sortBy = defaultSortFor(state.activeCategory);
         renderWishlist();
         break;
 
