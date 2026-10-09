@@ -19,6 +19,7 @@ import { RawgClient } from "./services/rawg.js";
 import { apiRouter } from "./routes/games.js";
 import { wishlistRouter } from "./routes/wishlist.js";
 import { uploadRouter } from "./routes/upload.js";
+import { feishuRouter } from "./routes/feishu.js";
 import { createStore } from "./services/store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -106,6 +107,8 @@ export function createServer() {
           await wishlistRouter(req, res, url, ctx);
         } else if (pathname.startsWith("/api/upload-image") || pathname.startsWith("/api/import-xhs-images")) {
           await uploadRouter(req, res, url, ctx);
+        } else if (pathname.startsWith("/api/sync-feishu")) {
+          await feishuRouter(req, res, url, ctx);
         } else {
           await apiRouter(req, res, url, ctx);
         }

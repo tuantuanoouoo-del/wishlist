@@ -133,6 +133,7 @@ function syncSections() {
   getEl("discoverySection").hidden = isRestaurant;      // 游戏搜索/新上架仅游戏页显示
   getEl("priorityToolbar").hidden = isRestaurant;       // 购买优先度仅游戏页显示
   getEl("addRestaurantBtn").hidden = !isRestaurant;     // 添加餐厅仅餐厅页显示
+  getEl("syncFeishuBtn").hidden = !isRestaurant;        // 同步飞书仅餐厅页显示
   const titles = {
     ns_game: "我的 NS 卡带心愿",
     restaurant: "我的餐厅心愿",
@@ -711,6 +712,17 @@ function bindEvents() {
       case "add-restaurant":
         openAddRestaurant(restaurantCtx);
         break;
+
+      case "sync-feishu": {
+        const btn = target;
+        setButtonLoading(btn, true, "同步中…");
+        api
+          .syncFeishu()
+          .then((r) => showToast(`已同步 ${r.count} 家餐厅到飞书`, "success"))
+          .catch((err) => showToast(err.message || "同步失败", "error"))
+          .finally(() => setButtonLoading(btn, false, "📤 同步到飞书"));
+        break;
+      }
 
       case "import-xhs": {
         const input = document.getElementById("restUrl");

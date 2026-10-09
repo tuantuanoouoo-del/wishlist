@@ -104,4 +104,11 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ urls: Array.isArray(urls) ? urls : [] }),
     }),
+
+  /** 把餐厅心愿同步到飞书多维表格，返回 { ok, count } */
+  syncFeishu: () =>
+    request("/api/sync-feishu", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }),
 };

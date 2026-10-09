@@ -46,5 +46,9 @@ export function loadConfig() {
     rawgBaseUrl: process.env.RAWG_BASE_URL || "https://api.rawg.io/api",
     supabaseUrl: (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, ""),
     supabaseAnonKey: (process.env.SUPABASE_ANON_KEY || "").trim(),
+    feishuAppId: (process.env.FEISHU_APP_ID || "").trim(),
+    feishuAppSecret: (process.env.FEISHU_APP_SECRET || "").trim(),
+    feishuBitableAppToken: (process.env.FEISHU_BITABLE_APP_TOKEN || "").trim(),
+    feishuBitableTableId: (process.env.FEISHU_BITABLE_TABLE_ID || "").trim(),
   };
 }
