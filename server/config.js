@@ -44,5 +44,7 @@ export function loadConfig() {
     host: process.env.HOST || "127.0.0.1",
     rawgApiKey: (process.env.RAWG_API_KEY || "").trim(),
     rawgBaseUrl: process.env.RAWG_BASE_URL || "https://api.rawg.io/api",
+    supabaseUrl: (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, ""),
+    supabaseAnonKey: (process.env.SUPABASE_ANON_KEY || "").trim(),
   };
 }

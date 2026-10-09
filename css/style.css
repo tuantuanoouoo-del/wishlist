@@ -736,3 +736,66 @@ h1, h2, h3, p { margin: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- 餐厅收藏 ---------- */
+.badge--count {
+  background: rgba(14, 17, 22, 0.85);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.cover img[data-action="lightbox"] { cursor: zoom-in; }
+.meta-link { color: var(--accent); text-decoration: none; }
+.meta-link:hover { text-decoration: underline; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+}
+.img-grid--new { margin-top: 8px; }
+.img-thumb {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.img-thumb__view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+}
+.img-thumb__view img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-thumb__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+}
+.img-thumb__remove:hover { background: var(--danger); }
+.img-add { align-self: flex-start; cursor: pointer; }
+
+@media (max-width: 480px) {
+  .field-row { grid-template-columns: 1fr; }
+}

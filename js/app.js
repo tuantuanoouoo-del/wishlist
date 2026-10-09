@@ -58,6 +58,8 @@ const state = {
   releasesError: "",
   detailContext: { game: null, itemId: null, inWishlist: false },
   editItemId: null,
+  editCategory: "ns_game",
+  pendingFiles: [],
 };
 
 // ---------- 工具 ----------
@@ -107,8 +109,22 @@ function renderCategoryNav() {
 
 function renderToolbar() {
   const stats = countStats(state.items, { category: state.activeCategory });
-  getEl("statusTabs").innerHTML = statusTabsHTML(state.statusFilter, stats);
-  getEl("statsLine").textContent = `共 ${stats.total} 个心愿 · 已购买 ${stats.completed}`;
+  getEl("statusTabs").innerHTML = statusTabsHTML(state.statusFilter, stats, state.activeCategory);
+  const doneWord = state.activeCategory === "restaurant" ? "已去过" : "已购买";
+  getEl("statsLine").textContent = `共 ${stats.total} 个心愿 · ${doneWord} ${stats.completed}`;
+}
+
+/** 按当前分类切换顶部区域显示（游戏搜索 vs 餐厅添加按钮） */
+function syncSections() {
+  const isRestaurant = state.activeCategory === "restaurant";
+  getEl("discoverySection").hidden = isRestaurant;
+  getEl("addRestaurantBtn").hidden = state.activeCategory === "ns_game";
+  const titles = {
+    ns_game: "我的 NS 卡带心愿",
+    restaurant: "我的餐厅心愿",
+    all: "我的全部心愿",
+  };
+  getEl("wishlistTitle").textContent = titles[state.activeCategory] || "我的心愿";
 }
 
 function priorityCounts() {
@@ -130,6 +146,7 @@ function renderWishlist() {
   renderCategoryNav();
   renderToolbar();
   renderPriorityTabs();
+  syncSections();
 
   const items = visibleItems();
   const grid = getEl("wishlistGrid");
@@ -138,9 +155,15 @@ function renderWishlist() {
   if (items.length === 0) {
     grid.innerHTML = "";
     const isFiltered = state.items.length > 0;
-    empty.innerHTML = isFiltered
-      ? emptyStateHTML("🔍", "没有符合条件的心愿", "试试切换筛选或分类。")
-      : emptyStateHTML("🎮", "还没有心愿", "在上方搜索游戏，点击「加入心愿单」开始收集。");
+    let emptyHTML;
+    if (isFiltered) {
+      emptyHTML = emptyStateHTML("🔍", "没有符合条件的心愿", "试试切换筛选或分类。");
+    } else if (state.activeCategory === "restaurant") {
+      emptyHTML = emptyStateHTML("🍜", "还没有收藏餐厅", "点右上角「＋ 添加餐厅」开始记录。");
+    } else {
+      emptyHTML = emptyStateHTML("🎮", "还没有心愿", "在上方搜索游戏，点击「加入心愿单」开始收集。");
+    }
+    empty.innerHTML = emptyHTML;
     empty.hidden = false;
   } else {
     empty.hidden = true;
@@ -352,7 +375,10 @@ function openEdit(itemId) {
   const item = state.items.find((i) => i.id === itemId);
   if (!item) return;
   state.editItemId = itemId;
+  state.editCategory = item.category;
+  state.pendingFiles = [];
   getEl("editContent").innerHTML = editModalHTML(item);
+  setEditModalTitle(item.category === "restaurant" ? "编辑餐厅" : "编辑心愿");
   openModal("editModal");
 }
 
@@ -366,6 +392,87 @@ function openEditForCurrentDetail() {
   }
   closeModal("detailModal");
   openEdit(itemId);
+}
+
+function setEditModalTitle(text) {
+  const el = document.querySelector("#editModal .modal__title");
+  if (el) el.textContent = text;
+}
+
+function openAddRestaurant() {
+  state.editItemId = null;
+  state.editCategory = "restaurant";
+  state.pendingFiles = [];
+  const blank = createWishlistItem({ category: "restaurant", title: "" });
+  getEl("editContent").innerHTML = editModalHTML(blank);
+  setEditModalTitle("添加餐厅");
+  openModal("editModal");
+}
+
+function renderPendingImages() {
+  const grid = getEl("imgGridNew");
+  if (!grid) return;
+  grid.innerHTML = state.pendingFiles
+    .map(
+      (f, i) => `
+      <div class="img-thumb img-thumb--new">
+        <img src="${URL.createObjectURL(f)}" alt="">
+        <button class="img-thumb__remove" data-action="img-remove-new" data-index="${i}" type="button" aria-label="移除">✕</button>
+      </div>`
+    )
+    .join("");
+}
+
+async function saveRestaurant(form, itemId) {
+  const title = form.title.value.trim();
+  if (!title) {
+    showToast("店名不能为空", "warn");
+    return;
+  }
+
+  // 保留未删除的已有图片
+  const kept = [...document.querySelectorAll("#imgGrid .img-thumb--existing")]
+    .map((el) => el.dataset.url)
+    .filter(Boolean);
+
+  // 上传新选择的图片
+  const pending = state.pendingFiles || [];
+  let uploaded = [];
+  if (pending.length) {
+    showToast(`正在上传 ${pending.length} 张图片…`, "info");
+    try {
+      uploaded = await Promise.all(pending.map((f) => api.uploadImage(f)));
+    } catch (err) {
+      showToast(`图片上传失败：${err.message}`, "error");
+      return;
+    }
+  }
+
+  const data = {
+    area: form.area.value.trim(),
+    cuisine: form.cuisine.value.trim(),
+    dishes: form.dishes.value.trim(),
+    price_per_person: parsePrice(form.price_per_person.value),
+    xhs_url: form.xhs_url.value.trim(),
+    images: [...kept, ...uploaded],
+  };
+  const note = form.note.value.trim();
+  const completed = form.completed.checked;
+
+  if (itemId) {
+    state.items = updateItem(state.items, itemId, { title, note, completed, data });
+  } else {
+    const item = createWishlistItem({ category: "restaurant", title, note, data });
+    state.items = [item, ...state.items];
+  }
+
+  persist();
+  render();
+  closeModal("editModal");
+  state.editItemId = null;
+  state.editCategory = "ns_game";
+  state.pendingFiles = [];
+  showToast("已保存", "success");
 }
 
 function parsePrice(str) {
@@ -426,7 +533,10 @@ function closePriceInput(input) {
   field.innerHTML = priceFieldHTML(item);
 }
 
-function saveEdit(form) {
+async function saveEdit(form) {
+  if (state.editCategory === "restaurant") {
+    return saveRestaurant(form, state.editItemId);
+  }
   const itemId = state.editItemId;
   if (!itemId) return;
   const title = form.title.value.trim();
@@ -461,7 +571,13 @@ function toggleCompleted(itemId) {
   state.items = updateItem(state.items, itemId, { completed: nowCompleted });
   persist();
   render();
-  showToast(nowCompleted ? "已标记为已购买" : "已标记为未购买", "success");
+  const isRestaurant = item.category === "restaurant";
+  showToast(
+    nowCompleted
+      ? isRestaurant ? "已标记为已去过" : "已标记为已购买"
+      : isRestaurant ? "已标记为未去" : "已标记为未购买",
+    "success"
+  );
 }
 
 function deleteItem(itemId) {
@@ -591,6 +707,26 @@ function bindEvents() {
         deleteItem(target.dataset.id);
         break;
 
+      // 餐厅：添加 / 图片移除
+      case "add-restaurant":
+        openAddRestaurant();
+        break;
+
+      case "img-remove": {
+        const thumb = target.closest(".img-thumb");
+        if (thumb) thumb.remove();
+        break;
+      }
+
+      case "img-remove-new": {
+        const idx = Number(target.dataset.index);
+        if (!Number.isNaN(idx) && idx >= 0 && idx < state.pendingFiles.length) {
+          state.pendingFiles.splice(idx, 1);
+          renderPendingImages();
+        }
+        break;
+      }
+
       // 详情弹窗
       case "add-wish":
         addFromDetail();
@@ -660,6 +796,25 @@ function bindEvents() {
     state.items = updateItem(state.items, item.id, { priority: sel.value });
     persist();
     renderWishlist();
+  });
+
+  // 餐厅表单：选择图片文件后加入待上传列表并预览
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.id === "restFileInput") {
+      const files = [...(e.target.files || [])];
+      const ok = [];
+      let skipped = 0;
+      for (const f of files) {
+        if (f.size > 3 * 1024 * 1024) skipped += 1;
+        else ok.push(f);
+      }
+      if (ok.length) {
+        state.pendingFiles.push(...ok);
+        renderPendingImages();
+      }
+      if (skipped > 0) showToast(`已跳过 ${skipped} 张超过 3MB 的图片`, "warn");
+      e.target.value = "";
+    }
   });
 
   // 优先度下拉失焦未选择 → 收回为徽章（不保存）

@@ -1,0 +1,245 @@
+// ==UserScript==
+// @name         小红书笔记提取（自用·餐厅收藏）
+// @namespace    wishlist-restaurant
+// @version      0.1.0
+// @description  仅读取当前打开的笔记页面上「可见」的标题、正文和图片，可下载图片。不登录、不读 Cookie、不连外部服务器、无自动更新。
+// @match        *://www.xiaohongshu.com/explore/*
+// @match        *://www.xiaohongshu.com/discovery/item/*
+// @match        *://www.rednote.com/explore/*
+// @match        *://www.rednote.com/discovery/item/*
+// @grant        GM_download
+// @run-at       document-idle
+// @noframes
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  // ============ 提取逻辑（只读当前页面可见内容）============
+
+  function getTitle() {
+    // 1) og:title 元标签
+    const og = document.querySelector('meta[property="og:title"]');
+    if (og && og.content && og.content.trim()) return og.content.trim();
+    // 2) 页面标题，去掉“ - 小红书”等后缀
+    let t = (document.title || '').replace(/\s*[-|–—·]\s*(小红书|RedNote|rednote).*$/i, '').trim();
+    return t;
+  }
+
+  function getBody() {
+    // 1) meta description / og:description
+    const md = document.querySelector('meta[name="description"], meta[property="og:description"]');
+    if (md && md.content && md.content.trim()) return md.content.trim();
+    // 2) 常见正文容器选择器（多个兜底）
+    const sels = [
+      '#detail-desc',
+      '.desc',
+      '[class*="note-text"]',
+      '[class*="desc"]',
+      '[class*="content"]',
+    ];
+    for (const s of sels) {
+      const el = document.querySelector(s);
+      if (el && el.innerText && el.innerText.trim()) return el.innerText.trim();
+    }
+    return '';
+  }
+
+  function cleanImgUrl(u) {
+    if (!u) return '';
+    return u.split('#')[0].trim();
+  }
+
+  function parseImgUrl(u) {
+    const base = u.split('?')[0];
+    const m = u.match(/\/w\/(\d+)/i);
+    return { base, w: m ? parseInt(m[1], 10) : 0 };
+  }
+
+  function collectImages() {
+    const best = new Map(); // base -> {url, w}，同一张图只保留最大尺寸
+    const consider = (u) => {
+      if (!u || !/xhscdn\.com|rednotecdn\.com|sns-img|sns-webpic/i.test(u)) return;
+      if (/avatar/i.test(u)) return; // 排除头像
+      const { base, w } = parseImgUrl(u);
+      const prev = best.get(base);
+      if (!prev || w > prev.w) best.set(base, { url: cleanImgUrl(u), w });
+    };
+
+    // og:image 是笔记自身的图，最可靠
+    document.querySelectorAll('meta[property="og:image"]').forEach(m => consider(m.content));
+
+    // 只收「大图」：已加载的自然宽度 或 URL 里的 w 参数 >= 400，
+    // 这样能排除作者头像和「相关笔记」的小缩略图
+    document.querySelectorAll('img').forEach(img => {
+      const src = img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('src');
+      if (!src) return;
+      const w = img.naturalWidth || parseImgUrl(src).w || 0;
+      if (w >= 400) consider(src);
+    });
+
+    return [...best.values()].map(v => v.url);
+  }
+
+  // ============ 下载 ============
+
+  function pickExt(u) {
+    const m = u.match(/format=(\w+)/i);
+    return m ? m[1].toLowerCase() : 'jpg';
+  }
+
+  function downloadImages(urls) {
+    if (!urls.length) return;
+    const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    urls.forEach((u, i) => {
+      const ext = pickExt(u);
+      const name = `xhs_${stamp}_${String(i + 1).padStart(2, '0')}.${ext}`;
+      try {
+        GM_download(u, name);
+      } catch (e) {
+        console.warn('GM_download 失败:', u, e);
+      }
+    });
+  }
+
+  // ============ 面板 UI ============
+
+  function buildPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'xhs-note-saver-panel';
+    panel.style.cssText = [
+      'position:fixed;top:16px;right:16px;z-index:2147483000;width:340px;max-height:80vh;',
+      'background:#fff;border:1px solid #e5e5e5;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);',
+      'font:13px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#222;',
+      'display:flex;flex-direction:column;overflow:hidden;',
+    ].join('');
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:10px 12px;font-weight:600;background:#fafafa;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;';
+    head.innerHTML = '<span>笔记提取</span>';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = 'border:0;background:none;font-size:18px;cursor:pointer;color:#999;line-height:1;';
+    closeBtn.onclick = () => panel.remove();
+    head.appendChild(closeBtn);
+    panel.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:12px;overflow:auto;';
+
+    // 标题
+    const titleLabel = document.createElement('div');
+    titleLabel.style.cssText = 'font-weight:600;margin-bottom:4px;';
+    titleLabel.textContent = '标题';
+    const titleBox = document.createElement('div');
+    titleBox.style.cssText = 'margin-bottom:10px;';
+    titleBox.textContent = getTitle() || '（未读取到标题）';
+    body.appendChild(titleLabel);
+    body.appendChild(titleBox);
+
+    // 正文（可编辑，方便手动补全）
+    const bodyLabel = document.createElement('div');
+    bodyLabel.style.cssText = 'font-weight:600;margin-bottom:4px;';
+    bodyLabel.textContent = '正文';
+    const bodyArea = document.createElement('textarea');
+    bodyArea.style.cssText = 'width:100%;min-height:90px;resize:vertical;border:1px solid #ddd;border-radius:8px;padding:8px;box-sizing:border-box;margin-bottom:10px;';
+    bodyArea.value = getBody() || '（未读取到正文，可在此手动粘贴）';
+    body.appendChild(bodyLabel);
+    body.appendChild(bodyArea);
+
+    // 图片
+    const imgLabel = document.createElement('div');
+    imgLabel.style.cssText = 'font-weight:600;margin-bottom:6px;';
+    const images = collectImages();
+    imgLabel.textContent = `图片（${images.length} 张）`;
+    body.appendChild(imgLabel);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;';
+    images.forEach(u => {
+      const a = document.createElement('a');
+      a.href = u;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.src = u;
+      img.style.cssText = 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;background:#f0f0f0;display:block;';
+      img.title = u;
+      a.appendChild(img);
+      grid.appendChild(a);
+    });
+    body.appendChild(grid);
+
+    // 按钮区
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+    const mkBtn = (text, primary, onClick) => {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.style.cssText = [
+        'flex:1;min-width:90px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid #ddd;',
+        primary ? 'background:#ff2442;color:#fff;border-color:#ff2442;' : 'background:#fff;color:#333;',
+      ].join('');
+      b.onclick = onClick;
+      return b;
+    };
+
+    const dlBtn = mkBtn('下载全部图片', true, () => {
+      const n = downloadImages(images);
+      dlBtn.textContent = '已触发下载';
+    });
+
+    const copyTextBtn = mkBtn('复制标题+正文', false, () => {
+      const text = `标题：${getTitle()}\n\n正文：\n${bodyArea.value}`;
+      navigator.clipboard.writeText(text).then(() => {
+        copyTextBtn.textContent = '已复制';
+        setTimeout(() => (copyTextBtn.textContent = '复制标题+正文'), 1200);
+      });
+    });
+
+    const copyImgBtn = mkBtn('复制图片链接', false, () => {
+      navigator.clipboard.writeText(images.join('\n')).then(() => {
+        copyImgBtn.textContent = '已复制';
+        setTimeout(() => (copyImgBtn.textContent = '复制图片链接'), 1200);
+      });
+    });
+
+    btnRow.appendChild(dlBtn);
+    btnRow.appendChild(copyTextBtn);
+    btnRow.appendChild(copyImgBtn);
+    body.appendChild(btnRow);
+
+    panel.appendChild(body);
+    document.body.appendChild(panel);
+  }
+
+  // ============ 悬浮开关 ============
+
+  function buildToggle() {
+    const btn = document.createElement('button');
+    btn.textContent = '提取笔记';
+    btn.style.cssText = [
+      'position:fixed;top:16px;right:16px;z-index:2147483000;',
+      'background:#ff2442;color:#fff;border:0;border-radius:20px;padding:9px 16px;cursor:pointer;',
+      'font:13px/1 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;box-shadow:0 4px 14px rgba(255,36,66,.4);',
+    ].join('');
+    btn.onclick = () => {
+      if (document.getElementById('xhs-note-saver-panel')) {
+        document.getElementById('xhs-note-saver-panel').remove();
+      } else {
+        buildPanel();
+      }
+    };
+    document.body.appendChild(btn);
+  }
+
+  // 等页面就绪再挂载（内容可能在登录弹窗关闭后才可见，用户手动关闭即可）
+  function init() {
+    if (document.body) {
+      buildToggle();
+    } else {
+      setTimeout(init, 300);
+    }
+  }
+  init();
+})();

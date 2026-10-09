@@ -59,4 +59,29 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(items),
     }),
+
+  /** 上传一张图片到 Supabase Storage，返回公开 URL */
+  uploadImage: (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "");
+        const m = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
+        const contentType = m?.[1] || file.type || "image/jpeg";
+        const data = m ? m[2] : dataUrl.split(",")[1];
+        request("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name || "image.jpg",
+            contentType,
+            data,
+          }),
+        })
+          .then((res) => resolve(res.url))
+          .catch(reject);
+      };
+      reader.onerror = () => reject(new ApiError("读取图片失败", 0));
+      reader.readAsDataURL(file);
+    }),
 };

@@ -19,6 +19,9 @@ export const LEGACY_KEY = "wishlist.items"; // 早期 localStorage 版遗留 key
  */
 export function normalizeItem(item) {
   if (!item || typeof item !== "object" || !item.id) return null;
+  const data = item.data && typeof item.data === "object" ? item.data : {};
+  // 图片字段统一为数组（餐厅收藏用），兼容旧数据
+  if (data.images != null && !Array.isArray(data.images)) data.images = [];
   return {
     id: String(item.id),
     category: item.category || "ns_game",
@@ -27,7 +30,7 @@ export function normalizeItem(item) {
     created_at: item.created_at || new Date().toISOString(),
     completed: Boolean(item.completed),
     priority: normalizePriority(item.priority),
-    data: item.data && typeof item.data === "object" ? item.data : {},
+    data,
   };
 }
 

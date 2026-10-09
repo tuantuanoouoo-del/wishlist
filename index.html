@@ -40,6 +40,7 @@
   <nav class="container category-nav" id="categoryNav" aria-label="心愿分类"></nav>
 
   <main class="container">
+    <div id="discoverySection">
     <!-- 搜索区 -->
     <section class="search-box">
       <form id="searchForm" class="search-form" autocomplete="off">
@@ -67,12 +68,16 @@
       </div>
       <div id="releasesBody" class="game-grid"></div>
     </section>
+    </div>
 
     <!-- 心愿单 -->
     <section class="wishlist">
       <div class="wishlist__head">
-        <h2 class="section-title">我的 NS 卡带心愿</h2>
-        <p id="statsLine" class="stats-line"></p>
+        <div>
+          <h2 id="wishlistTitle" class="section-title">我的 NS 卡带心愿</h2>
+          <p id="statsLine" class="stats-line"></p>
+        </div>
+        <button id="addRestaurantBtn" class="btn btn--primary" data-action="add-restaurant" type="button" hidden>＋ 添加餐厅</button>
       </div>
 
       <div class="toolbar toolbar--compact">

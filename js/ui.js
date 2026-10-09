@@ -50,10 +50,11 @@ export function categoryChipsHTML(categories, activeCategory, countsByCategory) 
 
 // ---------- 状态筛选 / 排序 ----------
 
-export function statusTabsHTML(activeStatus, stats) {
+export function statusTabsHTML(activeStatus, stats, category = "ns_game") {
+  const isRestaurant = category === "restaurant";
   const tabs = [
-    { id: "uncompleted", label: "未购买", count: stats.uncompleted },
-    { id: "completed", label: "已购买", count: stats.completed },
+    { id: "uncompleted", label: isRestaurant ? "未去" : "未购买", count: stats.uncompleted },
+    { id: "completed", label: isRestaurant ? "已去过" : "已购买", count: stats.completed },
   ];
   return tabs
     .map(
@@ -134,6 +135,7 @@ export function priceInputHTML(itemId, price) {
 }
 
 export function wishlistCardHTML(item) {
+  if (item.category === "restaurant") return restaurantCardHTML(item);
   const d = item.data || {};
   const cover = d.cover || "";
   const genres = Array.isArray(d.genres) ? d.genres.join(" / ") : "";
@@ -171,6 +173,56 @@ export function wishlistCardHTML(item) {
         <button class="btn btn--ghost btn--sm" data-action="edit" data-id="${escapeHtml(item.id)}" type="button">编辑</button>
         <button class="btn btn--ghost btn--sm" data-action="toggle" data-id="${escapeHtml(item.id)}" type="button">
           ${item.completed ? "标为未购买" : "标为已购买"}
+        </button>
+        <button class="btn btn--danger btn--sm" data-action="delete" data-id="${escapeHtml(item.id)}" type="button">删除</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+// ---------- 餐厅卡片 ----------
+
+export function restaurantCardHTML(item) {
+  const d = item.data || {};
+  const images = Array.isArray(d.images) ? d.images : [];
+  const cover = images[0] || "";
+  const doneClass = item.completed ? "game-card--bought" : "";
+  const xhsOk = /^https?:\/\//i.test(d.xhs_url || "");
+  const meta = [
+    ["区域", d.area],
+    ["菜系", d.cuisine],
+    ["人均", d.price_per_person != null && d.price_per_person !== "" ? `¥${d.price_per_person}` : ""],
+    ["推荐", d.dishes],
+  ].filter(([, v]) => v);
+
+  return `
+  <article class="game-card ${doneClass}" data-id="${escapeHtml(item.id)}">
+    <div class="cover">
+      ${
+        cover
+          ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy"
+                 data-action="lightbox" data-url="${escapeHtml(cover)}"
+                 onerror="this.parentElement.classList.add('cover--empty')">`
+          : ""
+      }
+      <span class="cover__placeholder">🍜 暂无图片</span>
+      ${item.completed ? '<span class="badge badge--bought">✓ 已去过</span>' : ""}
+      ${images.length > 1 ? `<span class="badge badge--count">${images.length} 图</span>` : ""}
+    </div>
+    <div class="game-card__body">
+      <h3 class="game-card__title" title="${escapeHtml(item.title)}">${escapeHtml(item.title || "未命名餐厅")}</h3>
+      ${meta
+        .map(([label, value]) => `<p class="game-card__meta"><span class="meta-label">${escapeHtml(label)}</span>${escapeHtml(value)}</p>`)
+        .join("")}
+      ${
+        xhsOk
+          ? `<p class="game-card__meta"><a class="meta-link" href="${escapeHtml(d.xhs_url)}" target="_blank" rel="noopener">🔗 小红书笔记</a></p>`
+          : ""
+      }
+      <div class="game-card__actions">
+        <button class="btn btn--ghost btn--sm" data-action="edit" data-id="${escapeHtml(item.id)}" type="button">编辑</button>
+        <button class="btn btn--ghost btn--sm" data-action="toggle" data-id="${escapeHtml(item.id)}" type="button">
+          ${item.completed ? "标为未去" : "标为已去过"}
         </button>
         <button class="btn btn--danger btn--sm" data-action="delete" data-id="${escapeHtml(item.id)}" type="button">删除</button>
       </div>
@@ -338,6 +390,7 @@ export function detailModalHTML(game, { inWishlist = false, loading = false, fet
 // ---------- 编辑弹窗 ----------
 
 export function editModalHTML(item) {
+  if (item.category === "restaurant") return restaurantEditFormHTML(item);
   const d = item.data || {};
   const priceValue = d.price != null ? d.price : "";
   const priority = normalizePriority(item.priority);
@@ -373,6 +426,75 @@ export function editModalHTML(item) {
     <label class="switch-row">
       <input type="checkbox" id="editCompleted" name="completed" ${item.completed ? "checked" : ""}>
       <span>已购买</span>
+    </label>
+  </form>`;
+}
+
+// ---------- 餐厅编辑 / 添加表单 ----------
+
+export function restaurantEditFormHTML(item) {
+  const d = item.data || {};
+  const images = Array.isArray(d.images) ? d.images : [];
+  const priceVal = d.price_per_person != null ? d.price_per_person : "";
+
+  return `
+  <form class="edit-form" id="editForm">
+    <div class="field">
+      <label for="restName">店名</label>
+      <input id="restName" name="title" type="text" value="${escapeHtml(item.title)}" maxlength="100" placeholder="例如：老北京涮肉">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="restArea">区域 / 商圈</label>
+        <input id="restArea" name="area" type="text" value="${escapeHtml(d.area || "")}" maxlength="100" placeholder="例如：三里屯">
+      </div>
+      <div class="field">
+        <label for="restCuisine">菜系</label>
+        <input id="restCuisine" name="cuisine" type="text" value="${escapeHtml(d.cuisine || "")}" maxlength="100" placeholder="例如：粤菜 / 火锅">
+      </div>
+    </div>
+    <div class="field">
+      <label for="restDishes">推荐菜</label>
+      <input id="restDishes" name="dishes" type="text" value="${escapeHtml(d.dishes || "")}" maxlength="200" placeholder="例如：烤鸭、虾饺、杨枝甘露">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="restPrice">人均（元）</label>
+        <input id="restPrice" name="price_per_person" type="number" min="0" step="0.01"
+               value="${escapeHtml(String(priceVal))}" placeholder="例如 80">
+      </div>
+      <div class="field">
+        <label for="restUrl">小红书链接</label>
+        <input id="restUrl" name="xhs_url" type="text" inputmode="url" value="${escapeHtml(d.xhs_url || "")}" maxlength="500" placeholder="https://www.xiaohongshu.com/explore/…">
+      </div>
+    </div>
+    <div class="field">
+      <label>图片（${images.length} 张）</label>
+      <div class="img-grid" id="imgGrid">
+        ${images
+          .map(
+            (u) => `
+          <div class="img-thumb img-thumb--existing" data-url="${escapeHtml(u)}">
+            <button class="img-thumb__view" data-action="lightbox" data-url="${escapeHtml(u)}" type="button" aria-label="查看大图">
+              <img src="${escapeHtml(u)}" alt="" loading="lazy" onerror="this.parentElement.classList.add('cover--empty')">
+            </button>
+            <button class="img-thumb__remove" data-action="img-remove" type="button" aria-label="移除图片">✕</button>
+          </div>`
+          )
+          .join("")}
+      </div>
+      <div class="img-grid img-grid--new" id="imgGridNew"></div>
+      <label class="btn btn--ghost btn--sm img-add" for="restFileInput">＋ 添加图片</label>
+      <input id="restFileInput" type="file" multiple accept="image/*" hidden>
+      <p class="hint">图片存到 Supabase，全家共享；单张不超过 3MB。</p>
+    </div>
+    <div class="field">
+      <label for="restNote">备注</label>
+      <textarea id="restNote" name="note" rows="2" maxlength="500" placeholder="例如：需提前订位 / 周末排队久">${escapeHtml(item.note)}</textarea>
+    </div>
+    <label class="switch-row">
+      <input type="checkbox" id="restCompleted" name="completed" ${item.completed ? "checked" : ""}>
+      <span>已去过</span>
     </label>
   </form>`;
 }

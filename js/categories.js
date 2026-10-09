@@ -18,6 +18,15 @@ export const CATEGORIES = [
       price: { label: "参考价格", type: "price" },
     },
   },
+  {
+    id: "restaurant",
+    name: "餐厅",
+    icon: "🍜",
+    enabled: true,
+    fields: {
+      price_per_person: { label: "人均", type: "price" },
+    },
+  },
 ];
 
 // —— 未来分类示例（暂未启用，架构已预留）——

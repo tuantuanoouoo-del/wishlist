@@ -21,6 +21,7 @@
 2. 填项目名（如 `wishlist`）、设置**数据库密码**（自己记牢，后面可能用）、Region 选**离你近的**（如 `Southeast Asia (Singapore)` 或 `Northeast Asia (Tokyo)`）；
 3. 建好后进入项目 → 左侧 **SQL Editor** → **New query**；
 4. 把本项目 `supabase/schema.sql` 的**全部内容**粘贴进去 → 点 **Run**（看到成功提示即可）；
+   > 这段 SQL 会**同时建好** `wishlist_state` 表，以及餐厅图片用的存储桶 `wishlist-images`（公开读 + 匿名上传），一次跑完即可，无需额外操作。
 5. 左侧 **Project Settings → API**，记下两个值（**下一步要填进 Vercel**）：
    - **Project URL**（形如 `https://xxxx.supabase.co`）
    - **anon public** key（以 `eyJ...` 开头的很长一串）
@@ -81,6 +82,7 @@ vercel --prod            # 正式上线，拿到 https://xxx.vercel.app
 ## 五、数据与维护
 
 - **数据存在哪**：Supabase 的 `wishlist_state` 表（`id=1` 那一行的 `items` 字段）。
+- **图片存在哪**：Supabase Storage 的 `wishlist-images` 桶；餐厅心愿里保存的是图片的公开 URL。
 - **备份**：Supabase 后台 → Table Editor → `wishlist_state` → 导出 CSV/JSON；或定期在 SQL Editor 执行 `select items from wishlist_state;` 复制结果。
 - **Supabase 免费档注意**：约 **7 天无访问会暂停**，去 Supabase 后台点 **Restore/Resume** 即可恢复（数据不丢）。
 - **无登录**：知道网址 + anon key 的人都能读写，仅限家庭/朋友使用，别公开传播网址。
