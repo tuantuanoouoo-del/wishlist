@@ -18,7 +18,15 @@ import {
   PRIORITY_LEVELS,
 } from "./wishlist.js";
 import { api, ApiError } from "./api.js";
-import { extractDishes } from "./restaurant.js";
+import {
+  extractDishes,
+  restaurantCardHTML,
+  restaurantEditFormHTML,
+  openAddRestaurant,
+  renderPendingImages,
+  saveRestaurant,
+  handleXhsNote,
+} from "./restaurant.js";
 import {
   categoryChipsHTML,
   statusTabsHTML,
@@ -41,14 +49,14 @@ import {
   setButtonLoading,
 } from "./ui.js";
 
-const CATEGORY = "ns_game"; // 第一阶段唯一启用的分类
+const CATEGORY = "ns_game"; // 游戏分类（餐厅走 restaurant.js 模块）
 
 const state = {
   items: [],
   activeCategory: "all",
   statusFilter: "uncompleted",
   priorityFilter: "all",
-  sortBy: "priority",
+  sortBy: "created_at",
   sortOrder: "desc",
   searchResults: [],
   searchQuery: "",
@@ -62,6 +70,9 @@ const state = {
   editCategory: "ns_game",
   pendingFiles: [],
 };
+
+// 餐厅模块上下文：注入 state / persist / render，避免餐厅模块反向依赖 app.js
+const restaurantCtx = { state, persist, render };
 
 // ---------- 工具 ----------
 
@@ -115,11 +126,12 @@ function renderToolbar() {
   getEl("statsLine").textContent = `共 ${stats.total} 个心愿 · ${doneWord} ${stats.completed}`;
 }
 
-/** 按当前分类切换顶部区域显示（游戏搜索 vs 餐厅添加按钮） */
+/** 按当前分类切换顶部区域显示（游戏搜索 vs 餐厅添加按钮），保证两页互不串场 */
 function syncSections() {
   const isRestaurant = state.activeCategory === "restaurant";
-  getEl("discoverySection").hidden = isRestaurant;
-  getEl("addRestaurantBtn").hidden = state.activeCategory === "ns_game";
+  getEl("discoverySection").hidden = isRestaurant;      // 游戏搜索/新上架仅游戏页显示
+  getEl("priorityToolbar").hidden = isRestaurant;       // 购买优先度仅游戏页显示
+  getEl("addRestaurantBtn").hidden = !isRestaurant;     // 添加餐厅仅餐厅页显示
   const titles = {
     ns_game: "我的 NS 卡带心愿",
     restaurant: "我的餐厅心愿",
@@ -168,7 +180,9 @@ function renderWishlist() {
     empty.hidden = false;
   } else {
     empty.hidden = true;
-    grid.innerHTML = items.map(wishlistCardHTML).join("");
+    grid.innerHTML = items
+      .map((it) => (it.category === "restaurant" ? restaurantCardHTML(it) : wishlistCardHTML(it)))
+      .join("");
   }
 }
 
@@ -251,8 +265,41 @@ function render() {
   syncSortUI();
 }
 
+/** 各分类可用的排序键，避免游戏字段串到餐厅页 */
+function sortOptionsFor(category) {
+  if (category === "restaurant") {
+    return [
+      { value: "created_at", label: "添加时间" },
+      { value: "title", label: "店名" },
+      { value: "price_per_person", label: "人均" },
+    ];
+  }
+  if (category === "ns_game") {
+    return [
+      { value: "priority", label: "优先度" },
+      { value: "created_at", label: "添加时间" },
+      { value: "title", label: "游戏名称" },
+      { value: "release_date", label: "发售日期" },
+      { value: "price", label: "参考价格" },
+    ];
+  }
+  // all（全部心愿）：只保留通用排序键
+  return [
+    { value: "created_at", label: "添加时间" },
+    { value: "title", label: "名称" },
+  ];
+}
+
 function syncSortUI() {
-  getEl("sortSelect").value = state.sortBy;
+  const select = getEl("sortSelect");
+  const options = sortOptionsFor(state.activeCategory);
+  if (!options.some((o) => o.value === state.sortBy)) {
+    state.sortBy = options[0].value;
+  }
+  select.innerHTML = options
+    .map((o) => `<option value="${o.value}">${o.label}</option>`)
+    .join("");
+  select.value = state.sortBy;
   getEl("sortOrderBtn").textContent = state.sortOrder === "asc" ? "升序 ↑" : "降序 ↓";
 }
 
@@ -378,7 +425,8 @@ function openEdit(itemId) {
   state.editItemId = itemId;
   state.editCategory = item.category;
   state.pendingFiles = [];
-  getEl("editContent").innerHTML = editModalHTML(item);
+  getEl("editContent").innerHTML =
+    item.category === "restaurant" ? restaurantEditFormHTML(item) : editModalHTML(item);
   setEditModalTitle(item.category === "restaurant" ? "编辑餐厅" : "编辑心愿");
   openModal("editModal");
 }
@@ -398,153 +446,6 @@ function openEditForCurrentDetail() {
 function setEditModalTitle(text) {
   const el = document.querySelector("#editModal .modal__title");
   if (el) el.textContent = text;
-}
-
-function openAddRestaurant() {
-  state.editItemId = null;
-  state.editCategory = "restaurant";
-  state.pendingFiles = [];
-  const blank = createWishlistItem({ category: "restaurant", title: "" });
-  getEl("editContent").innerHTML = editModalHTML(blank);
-  setEditModalTitle("添加餐厅");
-  openModal("editModal");
-}
-
-function renderPendingImages() {
-  const grid = getEl("imgGridNew");
-  if (!grid) return;
-  grid.innerHTML = state.pendingFiles
-    .map(
-      (f, i) => `
-      <div class="img-thumb img-thumb--new">
-        <img src="${URL.createObjectURL(f)}" alt="">
-        <button class="img-thumb__remove" data-action="img-remove-new" data-index="${i}" type="button" aria-label="移除">✕</button>
-      </div>`
-    )
-    .join("");
-}
-
-async function saveRestaurant(form, itemId) {
-  const title = form.title.value.trim();
-  if (!title) {
-    showToast("店名不能为空", "warn");
-    return;
-  }
-
-  // 保留未删除的已有图片
-  const kept = [...document.querySelectorAll("#imgGrid .img-thumb--existing")]
-    .map((el) => el.dataset.url)
-    .filter(Boolean);
-
-  // 上传新选择的图片
-  const pending = state.pendingFiles || [];
-  let uploaded = [];
-  if (pending.length) {
-    showToast(`正在上传 ${pending.length} 张图片…`, "info");
-    try {
-      uploaded = await Promise.all(pending.map((f) => api.uploadImage(f)));
-    } catch (err) {
-      showToast(`图片上传失败：${err.message}`, "error");
-      return;
-    }
-  }
-
-  const data = {
-    area: form.area.value.trim(),
-    cuisine: form.cuisine.value.trim(),
-    dishes: form.dishes.value.trim(),
-    price_per_person: parsePrice(form.price_per_person.value),
-    xhs_url: form.xhs_url.value.trim(),
-    images: [...kept, ...uploaded],
-  };
-  const note = form.note.value.trim();
-  const completed = form.completed.checked;
-
-  if (itemId) {
-    state.items = updateItem(state.items, itemId, { title, note, completed, data });
-  } else {
-    const item = createWishlistItem({ category: "restaurant", title, note, data });
-    state.items = [item, ...state.items];
-  }
-
-  persist();
-  render();
-  closeModal("editModal");
-  state.editItemId = null;
-  state.editCategory = "ns_game";
-  state.pendingFiles = [];
-  showToast("已保存", "success");
-}
-
-/** 把已转存好的图片 URL 追加到表单的图片网格（作为「已有图片」参与保存） */
-function appendExistingImages(urls) {
-  const grid = getEl("imgGrid");
-  if (!grid) return;
-  for (const u of urls) {
-    if (!u) continue;
-    const div = document.createElement("div");
-    div.className = "img-thumb img-thumb--existing";
-    div.dataset.url = u;
-
-    const view = document.createElement("button");
-    view.className = "img-thumb__view";
-    view.type = "button";
-    view.dataset.action = "lightbox";
-    view.dataset.url = u;
-    view.setAttribute("aria-label", "查看大图");
-    const img = document.createElement("img");
-    img.src = u;
-    img.alt = "";
-    img.loading = "lazy";
-    view.appendChild(img);
-
-    const rm = document.createElement("button");
-    rm.className = "img-thumb__remove";
-    rm.type = "button";
-    rm.dataset.action = "img-remove";
-    rm.setAttribute("aria-label", "移除图片");
-    rm.textContent = "✕";
-
-    div.appendChild(view);
-    div.appendChild(rm);
-    grid.appendChild(div);
-  }
-  const n = document.querySelectorAll("#imgGrid .img-thumb--existing").length;
-  const label = getEl("imgCount");
-  if (label) label.textContent = `图片（${n} 张）`;
-}
-
-/** 接收篡改猴脚本回传的笔记内容，回填到餐厅表单 */
-async function handleXhsNote(data) {
-  const form = document.getElementById("editForm");
-  if (!form || state.editCategory !== "restaurant") return;
-
-  const title = data.title || "";
-  const body = data.body || "";
-  const cover = data.cover || null;
-
-  // 店名用标题作为起点（用户可改）；正文填到备注
-  if (title && !form.title.value.trim()) form.title.value = title;
-  if (body && !form.note.value.trim()) form.note.value = body;
-
-  // 自动从正文提取菜名，填到「推荐菜」（用户可再核对/修改）
-  if (body && !form.dishes.value.trim()) {
-    const dishes = extractDishes(body);
-    if (dishes.length) form.dishes.value = dishes.join("、");
-  }
-
-  if (cover && cover.data) {
-    showToast("正在保存封面图…", "info");
-    try {
-      const url = await api.uploadImageData(cover);
-      appendExistingImages([url]);
-      showToast("封面图已保存", "success");
-    } catch (err) {
-      showToast(`封面图保存失败：${err.message}`, "warn");
-    }
-  } else {
-    showToast("已回填标题与正文（这条笔记没抓到封面图）", "success");
-  }
 }
 
 function parsePrice(str) {
@@ -607,7 +508,7 @@ function closePriceInput(input) {
 
 async function saveEdit(form) {
   if (state.editCategory === "restaurant") {
-    return saveRestaurant(form, state.editItemId);
+    return saveRestaurant(restaurantCtx, form, state.editItemId);
   }
   const itemId = state.editItemId;
   if (!itemId) return;
@@ -723,6 +624,12 @@ function bindEvents() {
     switch (action) {
       case "category":
         state.activeCategory = target.dataset.category;
+        // 餐厅页无「购买优先度」概念：切到餐厅时清掉残留的优先度筛选，避免串场
+        if (state.activeCategory === "restaurant") state.priorityFilter = "all";
+        {
+          const opts = sortOptionsFor(state.activeCategory);
+          if (!opts.some((o) => o.value === state.sortBy)) state.sortBy = opts[0].value;
+        }
         renderWishlist();
         break;
 
@@ -781,7 +688,7 @@ function bindEvents() {
 
       // 餐厅：添加 / 图片移除 / 一键导入
       case "add-restaurant":
-        openAddRestaurant();
+        openAddRestaurant(restaurantCtx);
         break;
 
       case "import-xhs": {
@@ -820,7 +727,7 @@ function bindEvents() {
         const idx = Number(target.dataset.index);
         if (!Number.isNaN(idx) && idx >= 0 && idx < state.pendingFiles.length) {
           state.pendingFiles.splice(idx, 1);
-          renderPendingImages();
+          renderPendingImages(restaurantCtx);
         }
         break;
       }
@@ -908,7 +815,7 @@ function bindEvents() {
       }
       if (ok.length) {
         state.pendingFiles.push(...ok);
-        renderPendingImages();
+        renderPendingImages(restaurantCtx);
       }
       if (skipped > 0) showToast(`已跳过 ${skipped} 张超过 3MB 的图片`, "warn");
       e.target.value = "";
@@ -919,7 +826,7 @@ function bindEvents() {
   window.addEventListener("message", (e) => {
     const data = e.data;
     if (!data || data.type !== "XHS_NOTE") return;
-    handleXhsNote(data);
+    handleXhsNote(restaurantCtx, data);
   });
 
   // 优先度下拉失焦未选择 → 收回为徽章（不保存）

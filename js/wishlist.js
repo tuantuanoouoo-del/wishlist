@@ -92,7 +92,7 @@ function isEmptyPrice(v) {
 
 /**
  * 排序。
- * by: "created_at" | "title" | "release_date" | "price" | "priority"
+ * by: "created_at" | "title" | "release_date" | "price" | "price_per_person" | "priority"
  * order: "asc" | "desc"
  * 已购买（completed）永远排到最后；「未购买 / 已购买」两组各自再按主排序键排序。
  * 价格/日期为空时始终排到末尾，绝不产生 NaN/undefined。
@@ -125,6 +125,8 @@ function applySort(list, { by, order }) {
         return it.data?.release_date || "";
       case "price":
         return it.data?.price;
+      case "price_per_person":
+        return it.data?.price_per_person;
       case "created_at":
       default:
         return it.created_at || "";
@@ -135,7 +137,7 @@ function applySort(list, { by, order }) {
     const ka = keyFor(a);
     const kb = keyFor(b);
 
-    if (by === "price") {
+    if (by === "price" || by === "price_per_person") {
       const ea = isEmptyPrice(ka);
       const eb = isEmptyPrice(kb);
       if (ea && eb) return 0;
