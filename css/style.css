@@ -808,3 +808,106 @@ h1, h2, h3, p { margin: 0; }
 @media (max-width: 480px) {
   .field-row { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   手机端优化（≤ 640px）
+   ------------------------------------------------------------
+   整体移动端体验：底部导航、单列大卡片、弹窗全屏、紧凑头部。
+   后续要微调手机版，改这一整块即可。
+   ============================================================ */
+@media (max-width: 640px) {
+  * { -webkit-tap-highlight-color: transparent; }
+
+  .container { padding: 0 12px; }
+
+  /* 头部更紧凑 */
+  .header { padding: 14px 0 8px; }
+  .brand { gap: 10px; }
+  .brand__logo { font-size: 26px; }
+  .brand__title { font-size: 18px; }
+  .brand__sub { font-size: 12px; }
+
+  /* 分类导航 → 固定底部导航栏（卡带 / 餐厅） */
+  .category-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-width: none;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 0;
+    padding: 4px 0 env(safe-area-inset-bottom, 0);
+    background: rgba(21, 26, 34, 0.97);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  .category-nav .chip {
+    position: relative;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 7px 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .category-nav .chip:hover { transform: none; border: none; }
+  .category-nav .chip__icon { font-size: 20px; }
+  .category-nav .chip__count { display: none; }
+  .category-nav .chip--active { background: transparent; color: var(--accent); }
+  .category-nav .chip--active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent);
+  }
+
+  /* 给底部导航留出空间，避免遮挡页脚 */
+  body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0)); }
+
+  /* 卡片单列铺满（更大更好点） */
+  .game-grid,
+  .search-results__body { grid-template-columns: 1fr; gap: 14px; }
+
+  /* 弹窗全屏（像原生页面，头尾固定、中间滚动） */
+  .modal { padding: 0; align-items: stretch; }
+  .modal__dialog {
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+  }
+  .modal__header { padding: 14px 16px; }
+  .modal__body { padding: 16px; }
+  .modal__footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0)); }
+
+  /* 工具栏：标签可横向滑动，排序占满整行 */
+  .toolbar { gap: 10px; }
+  .tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .toolbar__right { width: 100%; justify-content: space-between; }
+  .toolbar__right .select { flex: 1; }
+
+  /* 触控目标放大，方便手指点 */
+  .btn--sm { padding: 8px 13px; }
+  .tab { padding: 9px 14px; }
+  .game-card__actions .btn { min-height: 40px; }
+
+  /* Toast 上移，避免被底部导航挡住 */
+  .toast-container { bottom: calc(74px + env(safe-area-inset-bottom, 0)); }
+}
